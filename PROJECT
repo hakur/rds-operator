@@ -1,0 +1,17 @@
+domain: my.domain
+layout:
+- go.kubebuilder.io/v3
+multigroup: true
+projectName: rds-operator
+repo: github.com/hakur/rds-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: my.domain
+  group: rds
+  kind: Mysql
+  path: github.com/hakur/rds-operator/apis/rds/v1alpha1
+  version: v1alpha1
+version: "3"

@@ -1,0 +1,16 @@
+{
+    "files.exclude": {
+        "**/go.sum":true,
+        "**/.dockerignore":true,
+        "**/bin":true,
+        "**/hack":true,
+        "**/informers":true,
+        "**/listers":true,
+        "**/.gitignore":true,
+        "**/PROJECT":true,
+        "**/Makefile":true,
+        "**/go.mod":true,
+        "**/clientset":true,
+        "**/.vscode":true,
+    }
+}

@@ -1,0 +1,148 @@
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - rds.hakurei.cn
+  resources:
+  - mysqlboostraps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rds.hakurei.cn
+  resources:
+  - mysqlboostraps/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - rds.hakurei.cn
+  resources:
+  - mysqlboostraps/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - rds.hakurei.cn
+  resources:
+  - mysqls
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rds.hakurei.cn
+  resources:
+  - mysqls/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - rds.hakurei.cn
+  resources:
+  - mysqls/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - rds.hakurei.cn
+  resources:
+  - redis
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rds.hakurei.cn
+  resources:
+  - redis/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - rds.hakurei.cn
+  resources:
+  - redis/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - v1
+  resources:
+  - configMap
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - v1
+  resources:
+  - pod
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - v1
+  resources:
+  - service
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch

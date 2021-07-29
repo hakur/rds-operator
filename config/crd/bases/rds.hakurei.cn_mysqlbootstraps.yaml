@@ -1,0 +1,97 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.4.1
+  creationTimestamp: null
+  name: mysqlbootstraps.rds.hakurei.cn
+spec:
+  group: rds.hakurei.cn
+  names:
+    kind: MysqlBootstrap
+    listKind: MysqlBootstrapList
+    plural: mysqlbootstraps
+    shortNames:
+    - mcb
+    singular: mysqlbootstrap
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: MysqlBootstrap mysql cluster bootstrap spec this will create
+          a cluster master status watch if all nodes is running, start check master
+          status. if master not exists for serveral seconds , will rise first pod
+          to be master if master down, and new master found, will make first pod to
+          be an slave/foller,and rejoin to cluster
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: MysqlBootstrapSpec bootstrap spec
+            properties:
+              mysqlUsers:
+                description: MysqlUsers a list of users will be created when initialize
+                  cluster
+                items:
+                  description: MysqlUser mysql user settings
+                  properties:
+                    databaseTarget:
+                      description: 'DatabaseTarget which database or tables will granted
+                        privileges to this user. for example : grant all privileges
+                        on *.* to user xxx@''%'' indentified by ''xxxxx'', in this
+                        case, DatabaseTarget value should be ''*.*'''
+                      type: string
+                    domain:
+                      description: 'Domain user login domain , for example : ''%'''
+                      type: string
+                    password:
+                      description: Password mysql login password of this user
+                      type: string
+                    privileges:
+                      description: 'Privileges mysql grant sql privileges, for example
+                        : []stirng{ "SELECT" ,"REPLICATION CLIENT"} or []string{"ALL
+                        PRIVILEGES"}'
+                      items:
+                        type: string
+                      type: array
+                    username:
+                      description: Username mysql login account name
+                      type: string
+                  required:
+                  - databaseTarget
+                  - domain
+                  - password
+                  - privileges
+                  - username
+                  type: object
+                type: array
+            required:
+            - mysqlUsers
+            type: object
+          status:
+            description: MysqlBootstrapStatus bootstrap process status
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
