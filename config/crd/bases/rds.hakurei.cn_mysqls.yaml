@@ -673,6 +673,8 @@ spec:
                       and slave
                     format: int32
                     type: integer
+                  replicationUser:
+                    type: string
                   resources:
                     description: 'Compute Resources required by this container. Cannot
                       be updated. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
@@ -748,8 +750,8 @@ spec:
                 required:
                 - configImage
                 - image
+                - replicationUser
                 - storageSize
-                - users
                 - whitelist
                 type: object
               priorityClassName:

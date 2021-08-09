@@ -3,6 +3,7 @@ module github.com/hakur/rds-operator
 go 1.16
 
 require (
+	github.com/Rican7/retry v0.3.0 // indirect
 	github.com/bombsimon/logrusr v1.1.0
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/jinzhu/copier v0.3.2

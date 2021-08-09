@@ -2,7 +2,7 @@
 * mysql.rds.hakurei.cn/v1alpha1
     * mysql version
         - [ ] 5.7.34
-            - [ ] MGR single primary (WIP)
+            - [x] MGR single primary (WIP)
             - [ ] MGR multi primary
             - [ ] semi sync
             - [ ] traditional master/slave replication

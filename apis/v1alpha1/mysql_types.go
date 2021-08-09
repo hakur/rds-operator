@@ -86,7 +86,8 @@ type MysqlOptions struct {
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty" protobuf:"bytes,8,opt,name=resources"`
 	// MysqlUsers a list of users will be created when initialize cluster
-	Users []MysqlUser `json:"users"`
+	Users           []MysqlUser `json:"users,omitempty"`
+	ReplicationUser string      `json:"replicationUser"`
 }
 
 // ProxySQLOptions proxysql 参数

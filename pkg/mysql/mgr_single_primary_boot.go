@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"fmt"
 	"strings"
 
 	"gorm.io/gorm"
@@ -14,6 +15,7 @@ type NewMGRSinglePrimaryBootOpts struct {
 // NewMGRSinglePrimaryBoot new mysql mgr single primary mdoel cluster booter
 func NewMGRSinglePrimaryBoot(opts NewMGRSinglePrimaryBootOpts) (t *MGRSinglePrimaryBoot) {
 	t = new(MGRSinglePrimaryBoot)
+	t.Opts = opts
 	return t
 }
 
@@ -26,15 +28,15 @@ type MGRSinglePrimaryBoot struct {
 func (t *MGRSinglePrimaryBoot) CheckUserUpdate(username, password, domain string, privileges []string, privilegesTarget string) (err error) {
 	var data = new(MysqlUserTable)
 	// check user exists
-	if err = t.Opts.DB.Table("mysql.user").Where("user=? and host=?", username, domain).First(&data).Error; err != nil || data == nil {
+	if err = t.Opts.DB.Table("mysql.user").Where("user=? and host=?", username, domain).First(data).Error; err != nil || data == nil {
 		// user not exists, create it now
-		if err = t.Opts.DB.Exec("CREATE USER IF NOT EXISTS ?@? IDENTIFIED BY ?", username, domain, password).Error; err != nil {
+		if err = t.Opts.DB.Exec(fmt.Sprintf("CREATE USER IF NOT EXISTS '%s'@'%s' IDENTIFIED BY '%s'", username, domain, password)).Error; err != nil {
 			return err
 		}
 	}
 
 	// refresh privileges
-	if err = t.Opts.DB.Exec("GRANT ? TO ?@? ON ?", strings.Join(privileges, ","), username, domain, privilegesTarget).Error; err != nil {
+	if err = t.Opts.DB.Exec(fmt.Sprintf("GRANT %s ON %s TO '%s'@'%s'", strings.Join(privileges, ","), privilegesTarget, username, domain)).Error; err != nil {
 		return err
 	}
 
@@ -66,7 +68,7 @@ func (t *MGRSinglePrimaryBoot) BootCluster() (err error) {
 		return err
 	}
 
-	if err = t.Opts.DB.Exec("START GROUP REPLICATION").Error; err != nil {
+	if err = t.Opts.DB.Exec("START GROUP_REPLICATION;").Error; err != nil {
 		return err
 	}
 
@@ -75,13 +77,13 @@ func (t *MGRSinglePrimaryBoot) BootCluster() (err error) {
 
 // JoinCluster join mysql cluster, must run on slave nodes
 func (t *MGRSinglePrimaryBoot) JoinCluster(replicationUser, replicationPassword string) (err error) {
-	if err = t.Opts.DB.Exec("RESET MASTER").Error; err != nil {
+	if err = t.Opts.DB.Exec("RESET MASTER;").Error; err != nil {
 		return err
 	}
 
-	if err = t.Opts.DB.Exec("CHANGE MASTER TO MASTER_USER='" + replicationUser + "',MASTER_PASSWORD='" + replicationPassword + "' FOR CHANNEL 'group_replication_recovery'").Error; err != nil {
+	if err = t.Opts.DB.Exec("CHANGE MASTER TO MASTER_USER='" + replicationUser + "',MASTER_PASSWORD='" + replicationPassword + "' FOR CHANNEL 'group_replication_recovery';").Error; err != nil {
 		return err
 	}
 
-	return t.Opts.DB.Exec("START GROUP REPLICATION").Error
+	return t.Opts.DB.Exec("START GROUP_REPLICATION;").Error
 }

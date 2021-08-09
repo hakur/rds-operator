@@ -1,6 +1,7 @@
 package mysql
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 
@@ -88,11 +89,15 @@ func buildMysqlVolumes(cr *rdsv1alpha1.Mysql) (data []corev1.Volume) {
 // buildMysqlEnvs generate pod environments variables
 func buildMysqlEnvs(cr *rdsv1alpha1.Mysql) (data []corev1.EnvVar) {
 	var seeds string
+	var mysqlUsers string
 
 	for i := 0; i < int(*cr.Spec.Mysql.Replicas); i++ {
 		seeds += cr.Name + "-" + strconv.Itoa(i) + ":33061,"
 	}
 	seeds = strings.Trim(seeds, ",")
+
+	buf, _ := json.Marshal(cr.Spec.Mysql.Users)
+	mysqlUsers = string(buf)
 
 	data = []corev1.EnvVar{
 		{Name: "MYSQL_ROOT_PASSWORD", Value: *cr.Spec.RootPassword},
@@ -108,6 +113,8 @@ func buildMysqlEnvs(cr *rdsv1alpha1.Mysql) (data []corev1.EnvVar) {
 		{Name: "APPLIER_THRESHOLD", Value: strconv.Itoa(cr.Spec.Mysql.MGRSP.ApplierThreshold)},
 		{Name: "MGR_RETRIES", Value: strconv.Itoa(cr.Spec.Mysql.MGRSP.MGRRetries)},
 		{Name: "MGR_SEEDS", Value: seeds},
+		{Name: "MYSQL_BOOT_USERS", Value: mysqlUsers},
+		{Name: "MYSQL_REPLICATION_USER", Value: cr.Spec.Mysql.ReplicationUser},
 	}
 	if cr.Spec.Mysql.ExtraConfigDir != nil {
 		data = append(data, corev1.EnvVar{Name: "MYSQL_EXTRA_CONFIG_DIR", Value: *cr.Spec.Mysql.ExtraConfigDir})
@@ -123,6 +130,18 @@ func buildMysqlContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container) {
 	container.Env = buildMysqlEnvs(cr)
 	container.VolumeMounts = buildMysqlVolumeMounts()
 	container.Resources = cr.Spec.Mysql.Resources
+	return container
+}
+
+// buildMysqlBootContainer generate mysql container spec
+func buildMysqlBootContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container) {
+	container.Image = cr.Spec.Mysql.ConfigImage
+	container.ImagePullPolicy = cr.Spec.ImagePullPolicy
+	container.Name = "boot"
+	container.Env = buildMysqlEnvs(cr)
+	container.VolumeMounts = buildMysqlVolumeMounts()
+	container.Resources = cr.Spec.Mysql.Resources
+	container.Env = append(container.Env, corev1.EnvVar{Name: "BOOTSTRAP_CLUSTER", Value: "true"})
 	return container
 }
 
@@ -164,7 +183,7 @@ func buildMysqlSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet, err error) {
 	podTemplateSpec.Spec.Volumes = buildMysqlVolumes(cr)
 	podTemplateSpec.Spec.ShareProcessNamespace = &shareProcessNamespace
 	podTemplateSpec.Spec.InitContainers = []corev1.Container{buildMysqlConfigContainer(cr)}
-	podTemplateSpec.Spec.Containers = []corev1.Container{buildMysqlContainer(cr)}
+	podTemplateSpec.Spec.Containers = []corev1.Container{buildMysqlContainer(cr), buildMysqlBootContainer(cr)}
 	podTemplateSpec.Spec.PriorityClassName = cr.Spec.PriorityClassName
 
 	quantity, err := resource.ParseQuantity(cr.Spec.Mysql.StorageSize)

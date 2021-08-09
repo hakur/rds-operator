@@ -37,5 +37,6 @@ spec:
         - "REPLICATION CLIENT"
         - "SELECT"
       username: mgr
+    replicationUser: mgr
   proxysql: 
     image: proxysql/proxysql:2.2.0
