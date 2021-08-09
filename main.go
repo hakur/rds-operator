@@ -85,12 +85,6 @@ func main() {
 		logrus.WithField("err", err.Error()).WithField("controller", "Mysql").Fatal("could not set up mysqls.rds.hakurei.cn controller with manager")
 	}
 
-	if err = (&mysqlcontrollers.MysqlBootstrapReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		logrus.WithField("err", err.Error()).WithField("controller", "MysqlBootstrap").Fatal("could not set up mysqlbootstraps.rds.hakurei.cn controller with manager")
-	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

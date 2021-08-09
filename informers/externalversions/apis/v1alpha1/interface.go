@@ -25,8 +25,6 @@ import (
 type Interface interface {
 	// Mysqls returns a MysqlInformer.
 	Mysqls() MysqlInformer
-	// MysqlBootstraps returns a MysqlBootstrapInformer.
-	MysqlBootstraps() MysqlBootstrapInformer
 	// Redises returns a RedisInformer.
 	Redises() RedisInformer
 }
@@ -45,11 +43,6 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // Mysqls returns a MysqlInformer.
 func (v *version) Mysqls() MysqlInformer {
 	return &mysqlInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
-// MysqlBootstraps returns a MysqlBootstrapInformer.
-func (v *version) MysqlBootstraps() MysqlBootstrapInformer {
-	return &mysqlBootstrapInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Redises returns a RedisInformer.

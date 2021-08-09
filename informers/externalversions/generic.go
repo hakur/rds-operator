@@ -54,8 +54,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	// Group=apis, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("mysqls"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Apis().V1alpha1().Mysqls().Informer()}, nil
-	case v1alpha1.SchemeGroupVersion.WithResource("mysqlbootstraps"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Apis().V1alpha1().MysqlBootstraps().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("redises"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Apis().V1alpha1().Redises().Informer()}, nil
 

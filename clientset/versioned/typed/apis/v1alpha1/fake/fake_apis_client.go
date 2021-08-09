@@ -31,10 +31,6 @@ func (c *FakeApisV1alpha1) Mysqls(namespace string) v1alpha1.MysqlInterface {
 	return &FakeMysqls{c, namespace}
 }
 
-func (c *FakeApisV1alpha1) MysqlBootstraps(namespace string) v1alpha1.MysqlBootstrapInterface {
-	return &FakeMysqlBootstraps{c, namespace}
-}
-
 func (c *FakeApisV1alpha1) Redises(namespace string) v1alpha1.RedisInterface {
 	return &FakeRedises{c, namespace}
 }

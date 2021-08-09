@@ -81,6 +81,8 @@ type RedisSpec struct {
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty" protobuf:"bytes,8,opt,name=resources"`
+	// PriorityClassName redis and redis-cluster-proxy pods pod priority class name
+	PriorityClassName string `json:"priorityClassName,omitempty" protobuf:"bytes,24,opt,name=priorityClassName"`
 }
 
 // RedisStatus bootstrap process status

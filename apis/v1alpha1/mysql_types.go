@@ -48,6 +48,21 @@ type MysqlMGRSinglePrimaryOptions struct {
 	MGRRetries int `json:"mgrRetries,omitempty"`
 }
 
+// MysqlUser mysql user settings
+type MysqlUser struct {
+	// Username mysql login account name
+	Username string `json:"username"`
+	// Password mysql login password of this user
+	Password string `json:"password"`
+	// Privileges mysql grant sql privileges, for example : []stirng{ "SELECT" ,"REPLICATION CLIENT"} or []string{"ALL PRIVILEGES"}
+	Privileges []string `json:"privileges"`
+	// Domain user login domain , for example : '%'
+	Domain string `json:"domain"`
+	// DatabaseTarget which database or tables will granted privileges to this user.
+	// for example : grant all privileges on *.* to user xxx@'%' indentified by 'xxxxx', in this case, DatabaseTarget value should be '*.*'
+	DatabaseTarget string `json:"databaseTarget"`
+}
+
 // MysqlOptions mysql cluster options
 type MysqlOptions struct {
 	// Image mysql image
@@ -70,6 +85,8 @@ type MysqlOptions struct {
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty" protobuf:"bytes,8,opt,name=resources"`
+	// MysqlUsers a list of users will be created when initialize cluster
+	Users []MysqlUser `json:"users"`
 }
 
 // ProxySQLOptions proxysql 参数
@@ -105,6 +122,8 @@ type MysqlSpec struct {
 	ProxySQL ProxySQLOptions `json:"proxysql"`
 	// TimeZone timezone string , for example Asia/Shanghai
 	TimeZone string `json:"timeZone"`
+	// PriorityClassName pod priority class name for all pods under CR resource
+	PriorityClassName string `json:"priorityClassName,omitempty" protobuf:"bytes,24,opt,name=priorityClassName"`
 }
 
 // MysqlStatus defines the observed state of Mysql

@@ -19,6 +19,4 @@ package v1alpha1
 
 type MysqlExpansion interface{}
 
-type MysqlBootstrapExpansion interface{}
-
 type RedisExpansion interface{}

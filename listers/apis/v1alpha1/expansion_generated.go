@@ -25,14 +25,6 @@ type MysqlListerExpansion interface{}
 // MysqlNamespaceLister.
 type MysqlNamespaceListerExpansion interface{}
 
-// MysqlBootstrapListerExpansion allows custom methods to be added to
-// MysqlBootstrapLister.
-type MysqlBootstrapListerExpansion interface{}
-
-// MysqlBootstrapNamespaceListerExpansion allows custom methods to be added to
-// MysqlBootstrapNamespaceLister.
-type MysqlBootstrapNamespaceListerExpansion interface{}
-
 // RedisListerExpansion allows custom methods to be added to
 // RedisLister.
 type RedisListerExpansion interface{}

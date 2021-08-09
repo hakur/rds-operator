@@ -165,6 +165,7 @@ func buildMysqlSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet, err error) {
 	podTemplateSpec.Spec.ShareProcessNamespace = &shareProcessNamespace
 	podTemplateSpec.Spec.InitContainers = []corev1.Container{buildMysqlConfigContainer(cr)}
 	podTemplateSpec.Spec.Containers = []corev1.Container{buildMysqlContainer(cr)}
+	podTemplateSpec.Spec.PriorityClassName = cr.Spec.PriorityClassName
 
 	quantity, err := resource.ParseQuantity(cr.Spec.Mysql.StorageSize)
 	if err != nil {

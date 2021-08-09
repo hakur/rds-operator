@@ -115,6 +115,7 @@ func buildProxyDeploy(cr *rdsv1alpha1.Redis) (deploy *appsv1.Deployment, err err
 	podTemplateSpec.Spec.ServiceAccountName = cr.Spec.ServiceAccountName
 	podTemplateSpec.Spec.Affinity = cr.Spec.Affinity
 	podTemplateSpec.Spec.Tolerations = cr.Spec.Tolerations
+	podTemplateSpec.Spec.PriorityClassName = cr.Spec.PriorityClassName
 
 	spec.Template = podTemplateSpec
 	deploy.Spec = spec

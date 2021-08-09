@@ -42,6 +42,7 @@ func buildRedisSts(cr *rdsv1alpha1.Redis) (sts *appsv1.StatefulSet, err error) {
 	podTemplateSpec.Spec.ServiceAccountName = cr.Spec.ServiceAccountName
 	podTemplateSpec.Spec.Affinity = cr.Spec.Affinity
 	podTemplateSpec.Spec.Tolerations = cr.Spec.Tolerations
+	podTemplateSpec.Spec.PriorityClassName = cr.Spec.PriorityClassName
 
 	quantity, err := resource.ParseQuantity(cr.Spec.Redis.StorageSize)
 	if err != nil {

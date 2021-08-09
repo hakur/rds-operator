@@ -26,7 +26,6 @@ import (
 type ApisV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	MysqlsGetter
-	MysqlBootstrapsGetter
 	RedisesGetter
 }
 
@@ -37,10 +36,6 @@ type ApisV1alpha1Client struct {
 
 func (c *ApisV1alpha1Client) Mysqls(namespace string) MysqlInterface {
 	return newMysqls(c, namespace)
-}
-
-func (c *ApisV1alpha1Client) MysqlBootstraps(namespace string) MysqlBootstrapInterface {
-	return newMysqlBootstraps(c, namespace)
 }
 
 func (c *ApisV1alpha1Client) Redises(namespace string) RedisInterface {

@@ -4,7 +4,6 @@
 resources:
 - bases/rds.hakurei.cn_redis.yaml
 - bases/rds.hakurei.cn_mysqls.yaml
-- bases/rds.hakurei.cn_mysqlbootstraps.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

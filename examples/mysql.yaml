@@ -1,0 +1,41 @@
+kind: Mysql
+apiVersion: rds.hakurei.cn/v1alpha1
+metadata:
+  name: yuxing
+spec:
+  rootPassword: "zerocube"
+  clusterMode: MGRSP
+  backupPolicy: BackupDataDir
+  storageClassName: hostpath
+  timeZone: Asia/Shanghai
+  mysql:
+    image: mysql/mysql-server:5.7.34
+    configImage: rumia/mysql-config:v0.0.1
+    masterReplicas: 1
+    replicas: 3
+    storageSize: 1Gi
+    whitelist:
+      - "10.0.0.0/8"
+    mgrsp:
+      applierThreshold: 2500
+      mgrRetries: 100
+    extraConfigDir: /etc/my.cnf.d/
+    users:
+    - databaseTarget: "*.*"
+      domain: "%"
+      password: "monitor_me"
+      privileges:
+        - "REPLICATION SLAVE"
+        - "REPLICATION CLIENT"
+        - "SELECT"
+      username: monitor
+    - databaseTarget: "*.*"
+      domain: "%"
+      password: "replication"
+      privileges:
+        - "REPLICATION SLAVE"
+        - "REPLICATION CLIENT"
+        - "SELECT"
+      username: mgr
+  proxysql: 
+    image: proxysql/proxysql:2.2.0

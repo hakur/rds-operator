@@ -8,9 +8,11 @@
         "**/listers":true,
         "**/.gitignore":true,
         "**/PROJECT":true,
-        "**/Makefile":true,
         "**/go.mod":true,
         "**/clientset":true,
         "**/.vscode":true,
+        "**/rds-operator":true,
+        "**/rds-operator.exe":true,
+        "**/LICENSE":true,
     }
 }

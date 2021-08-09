@@ -5,8 +5,16 @@ import (
 	"gorm.io/gorm"
 )
 
+// NewDB new *gorm.DB from mysql DSN
 func NewDB(dsn string) (db *gorm.DB, err error) {
-	dsn = "user:pass@tcp(127.0.0.1:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local"
 	db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+
 	return
+}
+
+// MysqlUserTable mysql user table data fields
+type MysqlUserTable struct {
+	User     string `gorm:"user"`
+	Password string `gorm:"password"`
+	Host     string `gorm:"host"`
 }

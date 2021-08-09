@@ -14,7 +14,6 @@ func Resource(resource string) schema.GroupResource {
 func init() {
 	SchemeBuilder.Register(
 		&Mysql{}, &MysqlList{},
-		&MysqlBootstrap{}, &MysqlBootstrapList{},
 		&Redis{}, &RedisList{},
 	)
 }

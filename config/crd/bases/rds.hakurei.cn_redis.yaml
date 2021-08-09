@@ -640,6 +640,10 @@ spec:
               password:
                 description: Password 密码
                 type: string
+              priorityClassName:
+                description: PriorityClassName redis and redis-cluster-proxy pods
+                  pod priority class name
+                type: string
               proxy:
                 properties:
                   args:

@@ -703,6 +703,42 @@ spec:
                   storageSize:
                     description: StorageSize pvc disk size
                     type: string
+                  users:
+                    description: MysqlUsers a list of users will be created when initialize
+                      cluster
+                    items:
+                      description: MysqlUser mysql user settings
+                      properties:
+                        databaseTarget:
+                          description: 'DatabaseTarget which database or tables will
+                            granted privileges to this user. for example : grant all
+                            privileges on *.* to user xxx@''%'' indentified by ''xxxxx'',
+                            in this case, DatabaseTarget value should be ''*.*'''
+                          type: string
+                        domain:
+                          description: 'Domain user login domain , for example : ''%'''
+                          type: string
+                        password:
+                          description: Password mysql login password of this user
+                          type: string
+                        privileges:
+                          description: 'Privileges mysql grant sql privileges, for
+                            example : []stirng{ "SELECT" ,"REPLICATION CLIENT"} or
+                            []string{"ALL PRIVILEGES"}'
+                          items:
+                            type: string
+                          type: array
+                        username:
+                          description: Username mysql login account name
+                          type: string
+                      required:
+                      - databaseTarget
+                      - domain
+                      - password
+                      - privileges
+                      - username
+                      type: object
+                    type: array
                   whitelist:
                     description: Whitelist most of time it's kuberenetes pod CIDR
                       and service CIDR, for example []string{"10.24.0.0/16","10.25.0.0/16"}
@@ -713,8 +749,13 @@ spec:
                 - configImage
                 - image
                 - storageSize
+                - users
                 - whitelist
                 type: object
+              priorityClassName:
+                description: PriorityClassName pod priority class name for all pods
+                  under CR resource
+                type: string
               proxysql:
                 description: ProxySQL proxysql options
                 properties:
