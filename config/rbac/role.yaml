@@ -112,6 +112,17 @@ rules:
 - apiGroups:
   - v1
   resources:
+  - secret
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - v1
+  resources:
   - service
   verbs:
   - create

@@ -8,12 +8,13 @@ spec:
   backupPolicy: BackupDataDir
   storageClassName: hostpath
   timeZone: Asia/Shanghai
+  configImage: rumia/mysql-config:v0.0.1
   mysql:
     image: mysql/mysql-server:5.7.34
-    configImage: rumia/mysql-config:v0.0.1
     masterReplicas: 1
     replicas: 3
     storageSize: 1Gi
+    maxConn: 300
     whitelist:
       - "10.0.0.0/8"
     mgrsp:
@@ -40,3 +41,10 @@ spec:
     replicationUser: mgr
   proxysql: 
     image: proxysql/proxysql:2.2.0
+    mysqlVersion: "5.7.34"
+    monitorUser: "monitor"
+    monitorPassword: "monitor_me"
+    adminUser: admin
+    adminPassword: zerocube
+    nodePort: 32336
+    storageSize: 1Gi

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
+	"github.com/hakur/rds-operator/pkg/reconciler"
 	"github.com/hakur/rds-operator/util"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -82,10 +83,6 @@ func (t *RedisReconciler) checkDeleteOrApply(ctx context.Context, cr *rdsv1alpha
 
 // addBootstrapWorker add worker process thread to bootstrap redis nodes
 func (t *RedisReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Redis) (err error) {
-	var oldStatefulset appsv1.StatefulSet
-	var oldDeployment appsv1.Deployment
-	var oldService corev1.Service
-
 	statefulset, err := buildRedisSts(cr)
 	if err != nil {
 		return err
@@ -98,91 +95,24 @@ func (t *RedisReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Redis) (err
 	proxyService := buildProxySvc(cr)
 
 	// redis servers
-	if err := t.Get(ctx, client.ObjectKeyFromObject(statefulset), &oldStatefulset); err != nil {
-		if err := client.IgnoreNotFound(err); err == nil {
-			// add finalizer mark to CR,make sure CR clean is done by controller first
-			if err := ctrl.SetControllerReference(cr, statefulset, t.Scheme); err != nil {
-				return err
-			}
-			// if deployment not exist, create it
-			if err := t.Create(ctx, statefulset); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-	} else {
-		// if deployment exists, update it
-		if err := t.Update(ctx, statefulset); err != nil {
-			return err
-		}
+	if err = reconciler.ApplyStatefulSet(t.Client, ctx, statefulset, cr, t.Scheme); err != nil {
+		return err
 	}
 
 	// redis cluster proxy
-	if err := t.Get(ctx, client.ObjectKeyFromObject(deployment), &oldDeployment); err != nil {
-		if err := client.IgnoreNotFound(err); err == nil {
-			// add finalizer mark to CR,make sure CR clean is done by controller first
-			if err := ctrl.SetControllerReference(cr, deployment, t.Scheme); err != nil {
-				return err
-			}
-			// if deployment not exist, create it
-			if err := t.Create(ctx, deployment); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-	} else {
-		// if deployment exists, update it
-		if err := t.Update(ctx, deployment); err != nil {
-			return err
-		}
+	if err = reconciler.ApplyDeployment(t.Client, ctx, deployment, cr, t.Scheme); err != nil {
+		return err
 	}
 
-	if err := t.Get(ctx, client.ObjectKeyFromObject(redisService), &oldService); err != nil {
-		if err := client.IgnoreNotFound(err); err == nil {
-			// add finalizer mark to CR,make sure CR clean is done by controller first
-			if err := ctrl.SetControllerReference(cr, redisService, t.Scheme); err != nil {
-				return err
-			}
-			//if service not exists, create it
-			if err := t.Create(ctx, redisService); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-	} else {
-		// if service exists, update it
-		redisService.ResourceVersion = oldService.ResourceVersion
-		redisService.Spec.ClusterIP = oldService.Spec.ClusterIP
-		if err := t.Update(ctx, redisService); err != nil {
-			return err
-		}
+	if err = reconciler.ApplyService(t.Client, ctx, redisService, cr, t.Scheme); err != nil {
+		return err
 	}
 
-	if err := t.Get(ctx, client.ObjectKeyFromObject(proxyService), &oldService); err != nil {
-		if err := client.IgnoreNotFound(err); err == nil {
-			// add finalizer mark to CR,make sure CR clean is done by controller first
-			if err := ctrl.SetControllerReference(cr, proxyService, t.Scheme); err != nil {
-				return err
-			}
-			//if service not exists, create it
-			if err := t.Create(ctx, proxyService); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-	} else {
-		// if service exists, update it
-		proxyService.ResourceVersion = oldService.ResourceVersion
-		proxyService.Spec.ClusterIP = oldService.Spec.ClusterIP
-		if err := t.Update(ctx, proxyService); err != nil {
-			return err
-		}
+	if err = reconciler.ApplyService(t.Client, ctx, proxyService, cr, t.Scheme); err != nil {
+		return err
 	}
-	return
+
+	return nil
 }
 
 // clean remove related resources

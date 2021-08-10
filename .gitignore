@@ -29,3 +29,5 @@ rds-operator.exe
 
 cmd/mysql-sidecar/mysql-sidecar
 cmd/mysql-sidecar/mysql-sidecar.exe
+
+docker/mysql-config/mysql-config

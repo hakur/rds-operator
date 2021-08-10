@@ -637,6 +637,10 @@ spec:
                 description: ClusterMode mysql cluster mode,values are [ MGRMP MGRSP
                   SemiSync Async ]
                 type: string
+              configImage:
+                description: ConfigImage mysql initContainer for render mysql/proxysql
+                  config and boostrap mysql cluster
+                type: string
               imagePullPolicy:
                 description: ImagePullPolicy all pods image pull policy，value should
                   keep with corev1.PullPolicy
@@ -644,10 +648,6 @@ spec:
               mysql:
                 description: Mysql mysql cluset options
                 properties:
-                  configImage:
-                    description: ConfigImage mysql initContainer for render mysql
-                      config
-                    type: string
                   extraConfigDir:
                     type: string
                   image:
@@ -656,6 +656,8 @@ spec:
                   masterReplicas:
                     description: MasterReplicas master pod count
                     format: int32
+                    type: integer
+                  maxConn:
                     type: integer
                   mgrsp:
                     description: MGRSP mysql multi group replication single primary
@@ -748,7 +750,6 @@ spec:
                       type: string
                     type: array
                 required:
-                - configImage
                 - image
                 - replicationUser
                 - storageSize
@@ -761,11 +762,77 @@ spec:
               proxysql:
                 description: ProxySQL proxysql options
                 properties:
+                  adminPassword:
+                    description: AdminPassword admin password for AdminUser
+                    type: string
+                  adminUser:
+                    description: AdminUser proxysql side user for management proxysql
+                    type: string
                   image:
                     description: Image oci image full url ,for exmaple 'docker.io/library/nginx:1.18'
                     type: string
+                  monitorPassword:
+                    description: MonitorPassword password of MonitorUser
+                    type: string
+                  monitorUser:
+                    description: MonitorUser mysql server side user for proxysql monitor
+                      module connect
+                    type: string
+                  mysqlVersion:
+                    description: MysqlVersion specific version text will return to
+                      mysql client that connected on proxysql
+                    type: string
+                  nodePort:
+                    description: NodePort  nodeport of proxysql service if this value
+                      is nil, means no nodePort should be open if this value is zero,means
+                      open random nodePort if this value is zero,means open a specific
+                      nodePort
+                    format: int32
+                    type: integer
+                  replicas:
+                    description: Replicas mysql cluster pod total count,contains master
+                      and slave
+                    format: int32
+                    type: integer
+                  resources:
+                    description: 'Compute Resources required by this container. Cannot
+                      be updated. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Limits describes the maximum amount of compute
+                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Requests describes the minimum amount of compute
+                          resources required. If Requests is omitted for a container,
+                          it defaults to Limits if that is explicitly specified, otherwise
+                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                        type: object
+                    type: object
+                  storageSize:
+                    description: StorageSize pvc disk size
+                    type: string
                 required:
+                - adminPassword
+                - adminUser
                 - image
+                - monitorPassword
+                - monitorUser
+                - mysqlVersion
+                - nodePort
+                - storageSize
                 type: object
               rootPassword:
                 description: RootPassword mysql root password, if empty, an will allow
@@ -823,6 +890,7 @@ spec:
                 type: array
             required:
             - clusterMode
+            - configImage
             - mysql
             - proxysql
             - storageClassName

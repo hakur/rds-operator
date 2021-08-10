@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
+	"github.com/hakur/rds-operator/pkg/reconciler"
 	"github.com/hakur/rds-operator/util"
 )
 
@@ -43,6 +44,7 @@ type MysqlReconciler struct {
 //+kubebuilder:rbac:groups=v1,resources=service,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=v1,resources=pod,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=v1,resources=configMap,verbs=get;list;watch;create;update;delete
+//+kubebuilder:rbac:groups=v1,resources=secret,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -72,7 +74,7 @@ func (t *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r ct
 func (t *MysqlReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&rdsv1alpha1.Mysql{}).
-		Owns(&corev1.Service{}).Owns(&appsv1.StatefulSet{}).Owns(&corev1.ConfigMap{}).
+		Owns(&corev1.Service{}).Owns(&appsv1.StatefulSet{}).Owns(&corev1.ConfigMap{}).Owns(&corev1.Secret{}).
 		Complete(t)
 }
 
@@ -104,10 +106,38 @@ func (t *MysqlReconciler) checkDeleteOrApply(ctx context.Context, cr *rdsv1alpha
 }
 
 func (t *MysqlReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Mysql) (err error) {
-	var oldStatefulset appsv1.StatefulSet
-	var oldService corev1.Service
-	var oldConfigMap corev1.ConfigMap
+	if err = t.applyMysql(ctx, cr); err != nil {
+		return err
+	}
+	return t.applyProxySQL(ctx, cr)
+}
 
+// applyProxySQL create or update proxySQL resources
+func (t *MysqlReconciler) applyProxySQL(ctx context.Context, cr *rdsv1alpha1.Mysql) (err error) {
+	secret := buildSecret(cr)
+	service := buildProxySQLService(cr)
+	statefulset, err := buildProxySQLSts(cr)
+	if err != nil {
+		return err
+	}
+
+	if err := reconciler.ApplyService(t.Client, ctx, service, cr, t.Scheme); err != nil {
+		return err
+	}
+
+	if err := reconciler.ApplySecret(t.Client, ctx, secret, cr, t.Scheme); err != nil {
+		return err
+	}
+
+	if err := reconciler.ApplyStatefulSet(t.Client, ctx, statefulset, cr, t.Scheme); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// applyMysql create or update mysql resources
+func (t *MysqlReconciler) applyMysql(ctx context.Context, cr *rdsv1alpha1.Mysql) (err error) {
 	statefulset, err := buildMysqlSts(cr)
 	if err != nil {
 		return err
@@ -115,92 +145,30 @@ func (t *MysqlReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Mysql) (err
 	service := buildMysqlService(cr)
 	containerServices := buildMysqlContainerServices(cr)
 	configMap := buildMyCnfCM(cr)
+	secret := buildSecret(cr)
+
+	if err = reconciler.ApplySecret(t.Client, ctx, secret, cr, t.Scheme); err != nil {
+		return err
+	}
+
 	for _, containerService := range containerServices {
-		var oldContainerService corev1.Service
-		if err := t.Get(ctx, client.ObjectKeyFromObject(containerService), &oldContainerService); err != nil {
-			if err := client.IgnoreNotFound(err); err == nil {
-				// add finalizer mark to CR,make sure CR clean is done by controller first
-				if err := ctrl.SetControllerReference(cr, configMap, t.Scheme); err != nil {
-					return err
-				}
-				// if service not exists, create it now
-				if err := t.Create(ctx, containerService); err != nil {
-					return err
-				}
-			} else {
-				return err
-			}
-		} else {
-			containerService.ResourceVersion = oldContainerService.ResourceVersion
-			containerService.Spec.ClusterIP = oldContainerService.Spec.ClusterIP
-			// if service exists, update it now
-			if err := t.Update(ctx, containerService); err != nil {
-				return err
-			}
-		}
-	}
-
-	if err := t.Get(ctx, client.ObjectKeyFromObject(configMap), &oldConfigMap); err != nil {
-		if err := client.IgnoreNotFound(err); err == nil {
-			// add finalizer mark to CR,make sure CR clean is done by controller first
-			if err := ctrl.SetControllerReference(cr, configMap, t.Scheme); err != nil {
-				return err
-			}
-			// if configMap not exists, create it now
-			if err := t.Create(ctx, configMap); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-	} else {
-		// if configMap exists, update it now
-		if err := t.Update(ctx, configMap); err != nil {
+		if err = reconciler.ApplyService(t.Client, ctx, containerService, cr, t.Scheme); err != nil {
 			return err
 		}
 	}
 
-	if err := t.Get(ctx, client.ObjectKeyFromObject(statefulset), &oldStatefulset); err != nil {
-		if err := client.IgnoreNotFound(err); err == nil {
-			// add finalizer mark to CR,make sure CR clean is done by controller first
-			if err := ctrl.SetControllerReference(cr, statefulset, t.Scheme); err != nil {
-				return err
-			}
-			// if deployment not exist, create it
-			if err := t.Create(ctx, statefulset); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-	} else {
-		// if deployment exists, update it
-		if err := t.Update(ctx, statefulset); err != nil {
-			return err
-		}
+	if err = reconciler.ApplyConfigMap(t.Client, ctx, configMap, cr, t.Scheme); err != nil {
+		return err
 	}
 
-	if err := t.Get(ctx, client.ObjectKeyFromObject(service), &oldService); err != nil {
-		if err := client.IgnoreNotFound(err); err == nil {
-			// add finalizer mark to CR,make sure CR clean is done by controller first
-			if err := ctrl.SetControllerReference(cr, service, t.Scheme); err != nil {
-				return err
-			}
-			//if service not exists, create it
-			if err := t.Create(ctx, service); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-	} else {
-		// if service exists, update it
-		service.ResourceVersion = oldService.ResourceVersion
-		service.Spec.ClusterIP = oldService.Spec.ClusterIP
-		if err := t.Update(ctx, service); err != nil {
-			return err
-		}
+	if err = reconciler.ApplyStatefulSet(t.Client, ctx, statefulset, cr, t.Scheme); err != nil {
+		return err
 	}
+
+	if err = reconciler.ApplyService(t.Client, ctx, service, cr, t.Scheme); err != nil {
+		return err
+	}
+
 	return nil
 }
 

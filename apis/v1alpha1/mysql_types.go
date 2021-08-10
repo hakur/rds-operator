@@ -67,8 +67,6 @@ type MysqlUser struct {
 type MysqlOptions struct {
 	// Image mysql image
 	Image string `json:"image"`
-	// ConfigImage mysql initContainer for render mysql config
-	ConfigImage string `json:"configImage"`
 	// MasterReplicas master pod count
 	MasterReplicas *int32 `json:"masterReplicas,omitempty"`
 	// Replicas mysql cluster pod total count,contains master and slave
@@ -88,12 +86,37 @@ type MysqlOptions struct {
 	// MysqlUsers a list of users will be created when initialize cluster
 	Users           []MysqlUser `json:"users,omitempty"`
 	ReplicationUser string      `json:"replicationUser"`
+	MaxConn         *int        `json:"maxConn,omitempty"`
 }
 
 // ProxySQLOptions proxysql 参数
 type ProxySQLOptions struct {
 	// Image oci image full url ,for exmaple 'docker.io/library/nginx:1.18'
 	Image string `json:"image"`
+	// MysqlVersion specific version text will return to mysql client that connected on proxysql
+	MysqlVersion string `json:"mysqlVersion"`
+	// MonitorUser mysql server side user for proxysql monitor module connect
+	MonitorUser string `json:"monitorUser"`
+	// MonitorPassword password of MonitorUser
+	MonitorPassword string `json:"monitorPassword"`
+	// AdminUser proxysql side user for management proxysql
+	AdminUser string `json:"adminUser"`
+	// AdminPassword admin password for AdminUser
+	AdminPassword string `json:"adminPassword"`
+	// NodePort  nodeport of proxysql service
+	// if this value is nil, means no nodePort should be open
+	// if this value is zero,means open random nodePort
+	// if this value is zero,means open a specific nodePort
+	NodePort *int32 `json:"nodePort"`
+	// Replicas mysql cluster pod total count,contains master and slave
+	Replicas *int32 `json:"replicas,omitempty"`
+	// StorageSize pvc disk size
+	StorageSize string `json:"storageSize"`
+	// Compute Resources required by this container.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+	// +optional
+	Resources corev1.ResourceRequirements `json:"resources,omitempty" protobuf:"bytes,8,opt,name=resources"`
 }
 
 // MysqlSpec defines the desired state of Mysql
@@ -125,6 +148,8 @@ type MysqlSpec struct {
 	TimeZone string `json:"timeZone"`
 	// PriorityClassName pod priority class name for all pods under CR resource
 	PriorityClassName string `json:"priorityClassName,omitempty" protobuf:"bytes,24,opt,name=priorityClassName"`
+	// ConfigImage mysql initContainer for render mysql/proxysql config and boostrap mysql cluster
+	ConfigImage string `json:"configImage"`
 }
 
 // MysqlStatus defines the observed state of Mysql

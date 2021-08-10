@@ -1,9 +1,7 @@
 package mysql
 
 import (
-	"encoding/json"
 	"strconv"
-	"strings"
 
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
 	"github.com/jinzhu/copier"
@@ -26,12 +24,6 @@ func buildMyCnfCM(cr *rdsv1alpha1.Mysql) (cm *corev1.ConfigMap) {
 	if cr.Spec.Mysql.ExtraConfigDir != nil {
 		cnfDir = *cr.Spec.Mysql.ExtraConfigDir
 	}
-
-	// 	cnfContent := `
-	// [client]
-	// !includedir ` + cnfDir + `
-	// [mysqld]
-	// !includedir ` + cnfDir
 
 	cnfContent := `
 [mysqld]
@@ -88,37 +80,11 @@ func buildMysqlVolumes(cr *rdsv1alpha1.Mysql) (data []corev1.Volume) {
 
 // buildMysqlEnvs generate pod environments variables
 func buildMysqlEnvs(cr *rdsv1alpha1.Mysql) (data []corev1.EnvVar) {
-	var seeds string
-	var mysqlUsers string
-
-	for i := 0; i < int(*cr.Spec.Mysql.Replicas); i++ {
-		seeds += cr.Name + "-" + strconv.Itoa(i) + ":33061,"
-	}
-	seeds = strings.Trim(seeds, ",")
-
-	buf, _ := json.Marshal(cr.Spec.Mysql.Users)
-	mysqlUsers = string(buf)
-
 	data = []corev1.EnvVar{
-		{Name: "MYSQL_ROOT_PASSWORD", Value: *cr.Spec.RootPassword},
-		{Name: "TZ", Value: cr.Spec.TimeZone},
-		{Name: "MYSQL_DATA_DIR", Value: "/var/lib/mysql"},
-		{Name: "POD_DNS_SERVICE_NAME", Value: cr.Name},
 		{Name: "POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "status.podIP"}}},
 		{Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.name"}}},
-		{Name: "CLUSTER_MODE", Value: string(cr.Spec.ClusterMode)},
-		{Name: "POD_TOTAL_REPLICAS", Value: strconv.Itoa(int(*cr.Spec.Mysql.Replicas))},
-		{Name: "MYSQL_ROOT_HOST", Value: "%"},
-		{Name: "WHITELIST", Value: strings.Join(cr.Spec.Mysql.Whitelist, ",")},
-		{Name: "APPLIER_THRESHOLD", Value: strconv.Itoa(cr.Spec.Mysql.MGRSP.ApplierThreshold)},
-		{Name: "MGR_RETRIES", Value: strconv.Itoa(cr.Spec.Mysql.MGRSP.MGRRetries)},
-		{Name: "MGR_SEEDS", Value: seeds},
-		{Name: "MYSQL_BOOT_USERS", Value: mysqlUsers},
-		{Name: "MYSQL_REPLICATION_USER", Value: cr.Spec.Mysql.ReplicationUser},
 	}
-	if cr.Spec.Mysql.ExtraConfigDir != nil {
-		data = append(data, corev1.EnvVar{Name: "MYSQL_EXTRA_CONFIG_DIR", Value: *cr.Spec.Mysql.ExtraConfigDir})
-	}
+
 	return data
 }
 
@@ -129,16 +95,18 @@ func buildMysqlContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container) {
 	container.Name = "mysql"
 	container.Env = buildMysqlEnvs(cr)
 	container.VolumeMounts = buildMysqlVolumeMounts()
+	container.EnvFrom = []corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: cr.Name + "-secret"}}}}
 	container.Resources = cr.Spec.Mysql.Resources
 	return container
 }
 
 // buildMysqlBootContainer generate mysql container spec
 func buildMysqlBootContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container) {
-	container.Image = cr.Spec.Mysql.ConfigImage
+	container.Image = cr.Spec.ConfigImage
 	container.ImagePullPolicy = cr.Spec.ImagePullPolicy
 	container.Name = "boot"
 	container.Env = buildMysqlEnvs(cr)
+	container.EnvFrom = []corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: cr.Name + "-secret"}}}}
 	container.VolumeMounts = buildMysqlVolumeMounts()
 	container.Resources = cr.Spec.Mysql.Resources
 	container.Env = append(container.Env, corev1.EnvVar{Name: "BOOTSTRAP_CLUSTER", Value: "true"})
@@ -147,10 +115,11 @@ func buildMysqlBootContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container)
 
 // buildMysqlConfigContainer generate mysql config render caontainer spec
 func buildMysqlConfigContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container) {
-	container.Image = cr.Spec.Mysql.ConfigImage
+	container.Image = cr.Spec.ConfigImage
 	container.ImagePullPolicy = cr.Spec.ImagePullPolicy
 	container.Name = "config"
 	container.Env = buildMysqlEnvs(cr)
+	container.EnvFrom = []corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: cr.Name + "-secret"}}}}
 	container.VolumeMounts = buildMysqlVolumeMounts()
 	return container
 }

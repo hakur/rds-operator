@@ -19,6 +19,8 @@ import (
 )
 
 var (
+	configType = kingpin.Flag("config-type", "type of config gernate func,values are [ proxysql mysql ]").Default(envOrDefault("CONFIG_TYPE", "mysql")).String()
+	// mysql options
 	whitelist            = kingpin.Flag("whitelist", "mysql variable: whitelist").Default(envOrDefault("WHITELIST", "10.0.0.0/8,192.168.1.0/24")).String()
 	applierThreshold     = kingpin.Flag("applier-threshold", "mysql variable: loose-group_replication_flow_control_applier_threshold").Default(envOrDefault("APPLIER_THRESHOLD", "25000")).String()
 	mgrLocalAddr         = kingpin.Flag("mgr-local-addr", "mysql variable: loose-group_replication_local_address").Default(envOrDefault("HOSTNAME", "127.0.0.1") + ":33061").String()
@@ -31,10 +33,18 @@ var (
 	mysqlRootPassword    = kingpin.Flag("mysql-root-password", "mysql root password").Default(envOrDefault("MYSQL_ROOT_PASSWORD", "")).String()
 	mysqlBootUsers       = kingpin.Flag("mysql-boot-users", "json format user list").Default(envOrDefault("MYSQL_BOOT_USERS", "[]")).String()
 	mysqlReplicationUser = kingpin.Flag("mysql-replication-users", "json format user list").Default(envOrDefault("MYSQL_REPLICATION_USER", "root")).String()
+	mysqlMaxConn         = kingpin.Flag("mysql-max-conn", "max conn on each mysql server").Default(envOrDefault("MYSQL_MAX_CONN", "300")).Int()
+	mysqlServerVersion   = kingpin.Flag("mysql-server-version", "mysql server version").Default(envOrDefault("MYSQL_SERVER_VERSION", "5.7.34")).String()
+
+	// proxysql options
+	proxysqlMonitorUser    = kingpin.Flag("proxysql-monitor-user", "username on mysql servers but used for proxysql monitor").Default(envOrDefault("PROXYSQL_MONITOR_USER", "monitor")).String()
+	proxysqlMonitorPasword = kingpin.Flag("proxysql-monitor-password", "passworf of proxysql monitor user").Default(envOrDefault("PROXYSQL_MONITOR_PASSWORD", "monitor_me")).String()
+	proxysqlAdminUser      = kingpin.Flag("proxysql-admin-user", "proxysql admin user").Default(envOrDefault("PROXYSQL_ADMIN_USER", "admin")).String()
+	proxysqlAdminPasword   = kingpin.Flag("proxysql-admin-password", "passworf of proxysql admin user").Default(envOrDefault("PROXYSQL_ADMIN_PASSWORD", "admin_pwd")).String()
 )
 
 func init() {
-	logrus.Infof("args -> %s", kingpin.Parse())
+	kingpin.Parse()
 	logrus.Infof("clusterModel=%s ,serverID=%s, mysqlExtraConfigDir=%s, mgrLocalAddr=%s, mgrSeeds=%s", *clusterMode, *serverID, *mysqlExtraConfigDir, *mgrLocalAddr, *mgrSeeds)
 }
 
@@ -42,7 +52,11 @@ func main() {
 	if *bootstrap {
 		bootstrapMgrCluster()
 	} else {
-		gernateConfig()
+		if *configType == "mysql" {
+			gernateMysqlConfig()
+		} else {
+			gernateProxySQLConfig()
+		}
 	}
 }
 
@@ -132,66 +146,10 @@ func bootstrapMgrCluster() {
 	}
 }
 
-func gernateConfig() {
-	emptyConfig := `
-	[client]
-	[mysqld]
-	`
-	parser := mysql.NewConfigParser()
-	parser.Parse(strings.NewReader(emptyConfig))
-
-	clientSeciont, _ := parser.GetSection("client")
-	for k, v := range mysql.MysqlClientVars {
-		clientSeciont.Set(k, v)
-	}
-
-	mysqldSection, _ := parser.GetSection("mysqld")
-	for k, v := range mysql.MysqldVars {
-		mysqldSection.Set(k, v)
-	}
-
-	mysqldSection.Set("server-id", *serverID)
-	if *clusterMode == string(rdsv1alpha1.ModeMGRSP) {
-		addMGRSPVars(mysqldSection)
-	}
-
-	parser.SetSection("client", clientSeciont)
-	parser.SetSection("mysqld", mysqldSection)
-
-	cnfContent := parser.String() + "\n"
-
-	if err := os.WriteFile(*mysqlExtraConfigDir+"/my.cnf", []byte(cnfContent), 0755); err != nil {
-		logrus.WithField("err", err.Error()).Fatalf("write file to %s failed", *mysqlExtraConfigDir+"/my.cnf")
-	}
-	logrus.Infof("write file to %s successfully", *mysqlExtraConfigDir+"/my.cnf")
-}
-
-func addMGRSPVars(section *mysql.ConfigSection) {
-	for k, v := range mysql.SiglePrimaryVars {
-		section.Set(k, v)
-	}
-
-	section.Set("loose-group_replication_group_seeds", *mgrSeeds)
-	section.Set("loose_group_replication_ip_whitelist", *whitelist)
-	section.Set("loose-group_replication_flow_control_applier_threshold", *applierThreshold)
-	section.Set("loose-group_replication_local_address", *mgrLocalAddr)
-	section.Set("loose-group_replication_recovery_retry_count", strconv.Itoa(*mgrRetries))
-	section.Set("loose-group_replication_start_on_boot", "off")
-	section.Set("loose-group_replication_bootstrap_group", "off")
-}
-
 func envOrDefault(key string, defaultValue string) (value string) {
 	value = strings.TrimSpace(os.Getenv(key))
 	if value == "" {
 		value = defaultValue
 	}
 	return value
-}
-
-// getServerID get server id from kubernetes statefulset's pod hostname,it an string by in int format
-func getServerID() string {
-	arr := strings.Split(os.Getenv("HOSTNAME"), "-")
-	sid, _ := strconv.Atoi(arr[len(arr)-1])
-	sid++
-	return strconv.Itoa(sid)
 }
