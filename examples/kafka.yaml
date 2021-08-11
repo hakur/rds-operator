@@ -1,0 +1,2 @@
+kind: kafka
+apiVersion: rds.hakurei.cn/v1alpha1
