@@ -18,16 +18,12 @@ func ApplyService(c client.Client, ctx context.Context, data *corev1.Service, pa
 	var oldData corev1.Service
 	if err := c.Get(ctx, client.ObjectKeyFromObject(data), &oldData); err != nil {
 		if err := client.IgnoreNotFound(err); err == nil {
-			//if service not exists, create it
-			if err := c.Create(ctx, data); err != nil {
-				return err
-			}
-			// add finalizer mark to CR,make sure CR clean is done by controller first
+			// set gc reference
 			if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
 				return fmt.Errorf("SetControllerReference error: %s", err.Error())
 			}
-			// update reference
-			if err := c.Update(ctx, data); err != nil {
+			//if service not exists, create it
+			if err := c.Create(ctx, data); err != nil {
 				return err
 			}
 		} else {
@@ -35,6 +31,10 @@ func ApplyService(c client.Client, ctx context.Context, data *corev1.Service, pa
 		}
 	} else {
 		// if service exists, update it
+		// set gc reference
+		if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
+			return fmt.Errorf("SetControllerReference error: %s", err.Error())
+		}
 		data.ResourceVersion = oldData.ResourceVersion
 		data.Spec.ClusterIP = oldData.Spec.ClusterIP
 		if err := c.Update(ctx, data); err != nil {
@@ -50,15 +50,11 @@ func ApplySecret(c client.Client, ctx context.Context, data *corev1.Secret, pare
 	if err := c.Get(ctx, client.ObjectKeyFromObject(data), &oldData); err != nil {
 		if err := client.IgnoreNotFound(err); err == nil {
 			// if secret not exists, create it now
-			if err := c.Create(ctx, data); err != nil {
-				return err
-			}
-			// add finalizer mark to CR,make sure CR clean is done by controller first
+			// set gc reference
 			if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
 				return fmt.Errorf("SetControllerReference error: %s", err.Error())
 			}
-			// update reference
-			if err := c.Update(ctx, data); err != nil {
+			if err := c.Create(ctx, data); err != nil {
 				return err
 			}
 		} else {
@@ -66,6 +62,10 @@ func ApplySecret(c client.Client, ctx context.Context, data *corev1.Secret, pare
 		}
 	} else {
 		// if secret exists, update it now
+		// set gc reference
+		if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
+			return fmt.Errorf("SetControllerReference error: %s", err.Error())
+		}
 		if err := c.Update(ctx, data); err != nil {
 			return err
 		}
@@ -80,15 +80,11 @@ func ApplyStatefulSet(c client.Client, ctx context.Context, data *appsv1.Statefu
 	if err := c.Get(ctx, client.ObjectKeyFromObject(data), &oldData); err != nil {
 		if err := client.IgnoreNotFound(err); err == nil {
 			// if deployment not exist, create it
-			if err := c.Create(ctx, data); err != nil {
-				return err
-			}
-			// add finalizer mark to CR,make sure CR clean is done by controller first
+			// set gc reference
 			if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
 				return fmt.Errorf("SetControllerReference error: %s", err.Error())
 			}
-			// update reference
-			if err := c.Update(ctx, data); err != nil {
+			if err := c.Create(ctx, data); err != nil {
 				return err
 			}
 		} else {
@@ -96,6 +92,10 @@ func ApplyStatefulSet(c client.Client, ctx context.Context, data *appsv1.Statefu
 		}
 	} else {
 		// if deployment exists, update it
+		// set gc reference
+		if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
+			return fmt.Errorf("SetControllerReference error: %s", err.Error())
+		}
 		if err := c.Update(ctx, data); err != nil {
 			return err
 		}
@@ -110,16 +110,11 @@ func ApplyConfigMap(c client.Client, ctx context.Context, data *corev1.ConfigMap
 	if err := c.Get(ctx, client.ObjectKeyFromObject(data), &oldData); err != nil {
 		if err := client.IgnoreNotFound(err); err == nil {
 			// if configMap not exists, create it now
-			if err := c.Create(ctx, data); err != nil {
-				return err
-			}
-			// add finalizer mark to CR,make sure CR clean is done by controller first
+			// set gc reference
 			if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
 				return fmt.Errorf("SetControllerReference error: %s", err.Error())
 			}
-
-			// update reference
-			if err := c.Update(ctx, data); err != nil {
+			if err := c.Create(ctx, data); err != nil {
 				return err
 			}
 		} else {
@@ -127,6 +122,10 @@ func ApplyConfigMap(c client.Client, ctx context.Context, data *corev1.ConfigMap
 		}
 	} else {
 		// if configMap exists, update it now
+		// set gc reference
+		if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
+			return fmt.Errorf("SetControllerReference error: %s", err.Error())
+		}
 		if err := c.Update(ctx, data); err != nil {
 			return err
 		}
@@ -139,16 +138,11 @@ func ApplyDeployment(c client.Client, ctx context.Context, data *appsv1.Deployme
 	if err := c.Get(ctx, client.ObjectKeyFromObject(data), &oldData); err != nil {
 		if err := client.IgnoreNotFound(err); err == nil {
 			// if deployment not exist, create it
-			if err := c.Create(ctx, data); err != nil {
-				return err
-			}
-
-			// add finalizer mark to CR,make sure CR clean is done by controller first
+			// set gc reference
 			if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
-				return err
+				return fmt.Errorf("SetControllerReference error: %s", err.Error())
 			}
-			// update reference
-			if err := c.Update(ctx, data); err != nil {
+			if err := c.Create(ctx, data); err != nil {
 				return err
 			}
 		} else {
@@ -156,10 +150,24 @@ func ApplyDeployment(c client.Client, ctx context.Context, data *appsv1.Deployme
 		}
 	} else {
 		// if deployment exists, update it
+		// set gc reference
+		if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
+			return fmt.Errorf("SetControllerReference error: %s", err.Error())
+		}
 		if err := c.Update(ctx, data); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// AddPVCRetentionMark add delete deadline annottion to pvc
+func AddPVCRetentionMark() {
+
+}
+
+// RemovePVCRetentionMark remove delete deadline annottion to pvc
+func RemovePVCRetentionMark() {
+
 }

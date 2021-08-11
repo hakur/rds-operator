@@ -1,19 +1,3 @@
-/*
-Copyright 2021.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package v1alpha1
 
 import (
@@ -150,6 +134,13 @@ type MysqlSpec struct {
 	PriorityClassName string `json:"priorityClassName,omitempty" protobuf:"bytes,24,opt,name=priorityClassName"`
 	// ConfigImage mysql initContainer for render mysql/proxysql config and boostrap mysql cluster
 	ConfigImage string `json:"configImage"`
+	// PVCRetentionSeconds pvc retention seconds after CR has been deleted
+	// after pvc deleted, a deadline annotations will add to pvc.
+	// if deadline reached (default time.Now().Unix() + PVCRetentionSeconds), and CR not found(filtered by labels), pvc will be deleted by operator.
+	// if before deadline, a new CR with same labels of pvc created. pvc deadline annotation will be removed.
+	// if this field value is nil, types.PVCDeleteRetentionDays will be default value to this field
+	// if this field value is zero, pvc will alive forever
+	PVCRetentionSeconds *int `json:"pvcRetentionSeconds,omitempty"`
 }
 
 // MysqlStatus defines the observed state of Mysql

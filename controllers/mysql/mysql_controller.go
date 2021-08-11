@@ -1,19 +1,3 @@
-/*
-Copyright 2021.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package mysql
 
 import (
@@ -172,33 +156,7 @@ func (t *MysqlReconciler) applyMysql(ctx context.Context, cr *rdsv1alpha1.Mysql)
 	return nil
 }
 
+// clean remove unreferenced sub resources, such as mark pvc delete date
 func (t *MysqlReconciler) clean(ctx context.Context, cr *rdsv1alpha1.Mysql) (err error) {
-	var statefulsets appsv1.StatefulSetList
-	var services corev1.ServiceList
-	var configMaps corev1.ConfigMapList
-	if err = t.List(ctx, &statefulsets, client.InNamespace(cr.Namespace), client.MatchingLabels(buildMysqlLabels(cr))); err == nil {
-		for _, statefulset := range statefulsets.Items {
-			if err = t.Delete(ctx, &statefulset); err != nil {
-				return err
-			}
-		}
-	}
-
-	if err = t.List(ctx, &services, client.InNamespace(cr.Namespace), client.MatchingLabels(buildMysqlLabels(cr))); err == nil {
-		for _, service := range services.Items {
-			if err = t.Delete(ctx, &service); err != nil {
-				return err
-			}
-		}
-	}
-
-	if err = t.List(ctx, &configMaps, client.InNamespace(cr.Namespace), client.MatchingLabels(buildMysqlLabels(cr))); err == nil {
-		for _, configMap := range configMaps.Items {
-			if err = t.Delete(ctx, &configMap); err != nil {
-				return err
-			}
-		}
-	}
-
 	return nil
 }

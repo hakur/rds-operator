@@ -160,7 +160,7 @@ func buildMysqlSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet, err error) {
 		return nil, err
 	}
 
-	mysqlDataVolumeClaim.ObjectMeta = metav1.ObjectMeta{Name: "data"}
+	mysqlDataVolumeClaim.ObjectMeta = metav1.ObjectMeta{Name: "data", Labels: buildMysqlLabels(cr)} // use labels for gc , gc date is annotation types.PVCDeleteDateAnnotationName
 	mysqlDataVolumeClaim.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"}
 	mysqlDataVolumeClaim.Spec.StorageClassName = &cr.Spec.StorageClassName
 	mysqlDataVolumeClaim.Spec.Resources = corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: quantity}}
@@ -236,8 +236,9 @@ func buildMysqlContainerServices(cr *rdsv1alpha1.Mysql) (services []*corev1.Serv
 // buildMysqlLabels generate labels from cr resource, used for pod list filter
 func buildMysqlLabels(cr *rdsv1alpha1.Mysql) (labels map[string]string) {
 	labels = map[string]string{
-		"app":     "mysql",
-		"cr-name": cr.Name,
+		"app":       "mysql",
+		"cr-name":   cr.Name,
+		"api-group": rdsv1alpha1.GroupVersion.Group,
 	}
 	copier.Copy(labels, cr.Labels)
 	return labels

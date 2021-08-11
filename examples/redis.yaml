@@ -31,6 +31,6 @@ spec:
   proxy:
     image: rumia/redis-cluster-proxy:1.0-beta2
     replicas: 1
-    nodePort: 0
+    nodePort: 32337 #set to zero if want use random nodeport,delete this field will disable nodeport
   
   

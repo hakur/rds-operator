@@ -1,6 +1,11 @@
 package mysql
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
+
+var numberRegxp = regexp.MustCompile(`^\d+$`)
 
 type ProxySQLConfWriter struct {
 	Datadir         string
@@ -13,24 +18,24 @@ type ProxySQLConfWriter struct {
 }
 
 func (t *ProxySQLConfWriter) String() (conf string) {
-	conf += "datadir=" + t.Datadir + "\n"
-	conf += "admin_variables=\n(\n"
+	conf = "datadir=" + t.valueWrap(t.Datadir) + "\n"
+	conf += "admin_variables=\n{\n"
 	for k, v := range t.AdminVariables {
-		conf += "\t" + k + "=" + v + "\n"
+		conf += "\t" + k + "=" + t.valueWrap(v) + "\n"
 	}
-	conf += ")\n\n"
+	conf += "}\n\n"
 
-	conf += "mysql_variables=\n(\n"
+	conf += "mysql_variables=\n{\n"
 	for k, v := range t.MysqlVariables {
-		conf += "\t" + k + "=" + v + "\n"
+		conf += "\t" + k + "=" + t.valueWrap(v) + "\n"
 	}
-	conf += ")\n\n"
+	conf += "}\n\n"
 
-	conf += "mysql_users=\n(\n"
+	conf += "mysql_servers=\n(\n"
 	for _, v := range t.MysqlServers {
 		conf += "\t{ "
 		for kk, vv := range v {
-			conf += kk + "=" + vv + ", "
+			conf += kk + "=" + t.valueWrap(vv) + ", "
 		}
 		conf = strings.Trim(conf, ", ")
 		conf += " },\n"
@@ -42,7 +47,7 @@ func (t *ProxySQLConfWriter) String() (conf string) {
 	for _, v := range t.MysqlUsers {
 		conf += "\t{ "
 		for kk, vv := range v {
-			conf += kk + "=" + vv + ", "
+			conf += kk + "=" + t.valueWrap(vv) + ", "
 		}
 		conf = strings.Trim(conf, ", ")
 		conf += " },\n"
@@ -54,7 +59,7 @@ func (t *ProxySQLConfWriter) String() (conf string) {
 	for _, v := range t.MysqlQueryRules {
 		conf += "\t{ "
 		for kk, vv := range v {
-			conf += kk + "=" + vv + ", "
+			conf += kk + "=" + t.valueWrap(vv) + ", "
 		}
 		conf = strings.Trim(conf, ", ")
 		conf += " },\n"
@@ -66,7 +71,7 @@ func (t *ProxySQLConfWriter) String() (conf string) {
 	for _, v := range t.Scheduler {
 		conf += "\t{ "
 		for kk, vv := range v {
-			conf += kk + "=" + vv + ", "
+			conf += kk + "=" + t.valueWrap(vv) + ", "
 		}
 		conf = strings.Trim(conf, ", ")
 		conf += " },\n"
@@ -75,4 +80,13 @@ func (t *ProxySQLConfWriter) String() (conf string) {
 	conf += "\n)\n\n"
 
 	return conf
+}
+
+func (t *ProxySQLConfWriter) valueWrap(value string) (s string) {
+	if numberRegxp.Match([]byte(value)) {
+		s = value
+	} else {
+		s = `"` + value + `"`
+	}
+	return s
 }

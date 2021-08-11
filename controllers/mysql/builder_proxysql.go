@@ -12,6 +12,22 @@ import (
 // buildProxySQLVolumeMounts generate pod volumeMouns
 func buildProxySQLVolumeMounts() (data []corev1.VolumeMount) {
 	data = append(data, corev1.VolumeMount{MountPath: "/var/lib/proxysql", Name: "data"})
+	data = append(data, corev1.VolumeMount{MountPath: "/etc/proxysql.cnf.d", Name: "cnf"})
+	return
+}
+
+// buildProxySQLVolume generate pod volumeMouns
+func buildProxySQLVolume() (data []corev1.Volume) {
+	data = append(data, corev1.Volume{
+		Name: "cnf",
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{
+				SizeLimit: &resource.Quantity{
+					Format: resource.Format("32KiB"),
+				},
+			},
+		},
+	})
 	return
 }
 
@@ -79,6 +95,7 @@ func buildProxySQLSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet, err error
 	podTemplateSpec.Spec.InitContainers = []corev1.Container{buildProxySQLConfigContainer(cr)}
 	podTemplateSpec.Spec.Containers = []corev1.Container{buildProxySQLContainer(cr)}
 	podTemplateSpec.Spec.PriorityClassName = cr.Spec.PriorityClassName
+	podTemplateSpec.Spec.Volumes = buildProxySQLVolume()
 
 	quantity, err := resource.ParseQuantity(cr.Spec.ProxySQL.StorageSize)
 	if err != nil {
@@ -102,7 +119,7 @@ func buildProxySQLService(cr *rdsv1alpha1.Mysql) (svc *corev1.Service) {
 	svc = new(corev1.Service)
 
 	svc.ObjectMeta = metav1.ObjectMeta{
-		Name:      cr.Name,
+		Name:      cr.Name + "-proxysql",
 		Namespace: cr.Namespace,
 		Labels:    buildProxySQLLabels(cr),
 	}
@@ -136,8 +153,9 @@ func buildProxySQLService(cr *rdsv1alpha1.Mysql) (svc *corev1.Service) {
 // buildProxySQLLabels generate labels from cr resource, used for pod list filter
 func buildProxySQLLabels(cr *rdsv1alpha1.Mysql) (labels map[string]string) {
 	labels = map[string]string{
-		"app":     "proxysql",
-		"cr-name": cr.Name,
+		"app":       "proxysql",
+		"cr-name":   cr.Name,
+		"api-group": rdsv1alpha1.GroupVersion.Group,
 	}
 	copier.Copy(labels, cr.Labels)
 	return labels

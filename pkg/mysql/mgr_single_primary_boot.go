@@ -50,6 +50,7 @@ func (t *MGRSinglePrimaryBoot) CheckUserUpdate(username, password, domain string
 
 // CheckClusterHasAliveNode if there is a alive node, it will be the candicate to bootstrap node
 func (t *MGRSinglePrimaryBoot) CheckClusterHasAliveNode(dsns []string) bool {
+	fmt.Println("----", dsns)
 	for _, dsn := range dsns {
 		db, err := NewDB(dsn)
 		if err == nil && db != nil {

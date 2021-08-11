@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -68,8 +67,7 @@ func bootstrapMgrCluster() {
 	seeds := strings.Split(*mgrSeeds, ",")
 	for _, seed := range seeds {
 		mysqlHostInfoArr := strings.Split(seed, ":")
-
-		if mysqlHostID, err := strconv.Atoi(mysqlHostInfoArr[len(mysqlHostInfoArr)-1]); mysqlHostID > 0 && err != nil {
+		if GetMysqlServerIDByPodName(mysqlHostInfoArr[0]) > 1 {
 			mysqlDSN := fmt.Sprintf("root:%s@tcp(%s:3306)/mysql", *mysqlRootPassword, mysqlHostInfoArr[0])
 			mysqlDSNs = append(mysqlDSNs, mysqlDSN)
 		}

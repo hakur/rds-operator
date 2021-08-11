@@ -115,42 +115,7 @@ func (t *RedisReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Redis) (err
 	return nil
 }
 
-// clean remove related resources
+// clean remove unreferenced sub resources, such as mark pvc delete date
 func (t *RedisReconciler) clean(ctx context.Context, cr *rdsv1alpha1.Redis) (err error) {
-	var statefulsets appsv1.StatefulSetList
-	if err = t.List(ctx, &statefulsets, client.InNamespace(cr.Namespace), client.MatchingLabels(buildRedisLabels(cr))); err == nil {
-		for _, statefulset := range statefulsets.Items {
-			if err = t.Delete(ctx, &statefulset); err != nil {
-				return err
-			}
-		}
-	}
-
-	var deployments appsv1.DeploymentList
-	if err = t.List(ctx, &deployments, client.InNamespace(cr.Namespace), client.MatchingLabels(buildProxyLabels(cr))); err == nil {
-		for _, deployment := range deployments.Items {
-			if err = t.Delete(ctx, &deployment); err != nil {
-				return err
-			}
-		}
-	}
-
-	var services corev1.ServiceList
-	if err = t.List(ctx, &services, client.InNamespace(cr.Namespace), client.MatchingLabels(buildProxyLabels(cr))); err == nil {
-		for _, service := range services.Items {
-			if err = t.Delete(ctx, &service); err != nil {
-				return err
-			}
-		}
-	}
-
-	if err = t.List(ctx, &services, client.InNamespace(cr.Namespace), client.MatchingLabels(buildRedisLabels(cr))); err == nil {
-		for _, service := range services.Items {
-			if err = t.Delete(ctx, &service); err != nil {
-				return err
-			}
-		}
-	}
-
 	return nil
 }

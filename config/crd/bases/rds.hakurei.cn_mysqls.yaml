@@ -834,6 +834,16 @@ spec:
                 - nodePort
                 - storageSize
                 type: object
+              pvcRetentionSeconds:
+                description: PVCRetentionSeconds pvc retention seconds after CR has
+                  been deleted after pvc deleted, a deadline annotations will add
+                  to pvc. if deadline reached (default time.Now().Unix() + PVCRetentionSeconds),
+                  and CR not found(filtered by labels), pvc will be deleted by operator.
+                  if before deadline, a new CR with same labels of pvc created. pvc
+                  deadline annotation will be removed. if this field value is nil,
+                  types.PVCDeleteRetentionDays will be default value to this field
+                  if this field value is zero, pvc will alive forever
+                type: integer
               rootPassword:
                 description: RootPassword mysql root password, if empty, an will allow
                   empty password login

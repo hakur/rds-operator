@@ -46,8 +46,9 @@ func buildProxySvc(cr *rdsv1alpha1.Redis) (svc *corev1.Service) {
 // buildProxyLabels generate labels from cr resource, used for pod list filter
 func buildProxyLabels(cr *rdsv1alpha1.Redis) (labels map[string]string) {
 	labels = map[string]string{
-		"app":     "redis-cluster-proxy",
-		"cr-name": cr.Name,
+		"app":       "redis-cluster-proxy",
+		"cr-name":   cr.Name,
+		"api-group": rdsv1alpha1.GroupVersion.Group,
 	}
 	copier.Copy(labels, cr.Labels)
 	return labels

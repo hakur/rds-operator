@@ -1,13 +1,13 @@
 #!/bin/bash
 # 注意如果proxysql的后端是sqlite3，那么是不支持事务的，因此这个脚本里面都是不带事务的happy pass
-
 READ_GROUP_ID=2
 WRITE_GROUP_ID=1
 MYSQL_PORT=3306
 PROXYSQL_ADMIN_PORT=6032
-PROXYSQL_ADMIN_USER={{ $adminUser }}
-PROXYSQL_ADMIN_PASSWORD={{ $adminPassword }}
-MYSQL_NDOE_MAX_CONN={{ $.Values.mysql.maxConn }}
+PROXYSQL_ADMIN_USER=$1
+PROXYSQL_ADMIN_PASSWORD=$2
+MYSQL_NDOE_MAX_CONN=${MYSQL_MAX_CONN:-300}
+MYSQL_READ_HOSTS=$3
 
 function echolog() {
   echo "msrsp_switch.sh：[$(date)] $1"
@@ -49,7 +49,7 @@ function moveServerToReadGroup() {
 
 function findBestPrimaryServer() {
   # local readServers=$(proxysqlCmd "select hostname from mysql_servers where hostgroup_id=${READ_GROUP_ID} and status='ONLINE';")
-  local readServers="{{ $mysqlHosts }}"
+  local readServers=$MYSQL_READ_HOSTS
   for server in $readServers;do
     if [ "$(checkWriteNodeIsOk $server)" == "true" ];then
       local serverUUID=$(mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -P$MYSQL_PORT -h$server -N -se "show variables like 'server_uuid';" | awk '{print $2}')

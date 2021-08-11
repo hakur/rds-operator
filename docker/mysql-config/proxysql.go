@@ -45,10 +45,12 @@ func gernateProxySQLConfig() {
 	}
 
 	seeds := strings.Split(*mgrSeeds, ",")
+	var mysqlHostList []string
 	for _, seed := range seeds {
 		mysqlHostInfoArr := strings.Split(seed, ":")
+		mysqlHostList = append(mysqlHostList, mysqlHostInfoArr[0])
 
-		if mysqlHostID, err := strconv.Atoi(mysqlHostInfoArr[len(mysqlHostInfoArr)-1]); mysqlHostID > 0 && err != nil {
+		if GetMysqlServerIDByPodName(mysqlHostInfoArr[0]) == 1 {
 			cw.MysqlServers = append(cw.MysqlServers, map[string]string{
 				"address":         mysqlHostInfoArr[0],
 				"port":            "3306",
@@ -82,10 +84,20 @@ func gernateProxySQLConfig() {
 		"id":          "1",
 		"interval_ms": "5000",
 		"filename":    "/mgrsp_switch.sh",
+		"arg1":        *proxysqlAdminUser,
+		"arg2":        *proxysqlAdminPasword,
+		"arg3":        strings.Join(mysqlHostList, " "),
+	})
+	cw.Scheduler = append(cw.Scheduler, map[string]string{
+		"id":          "2",
+		"interval_ms": "60000",
+		"filename":    "/load_servers.sh",
+		"arg1":        *proxysqlAdminUser,
+		"arg2":        *proxysqlAdminPasword,
 	})
 
-	if err := os.WriteFile("/etc/proxysql.cnf", []byte(cw.String()), 0755); err != nil {
-		logrus.WithField("err", err.Error()).Fatal("write /etc/proxysql.cnf failed")
+	if err := os.WriteFile("/etc/proxysql.cnf.d/proxysql.cnf", []byte(cw.String()), 0755); err != nil {
+		logrus.WithField("err", err.Error()).Fatal("write /etc/proxysql.cnf.d/proxysql.cnf failed")
 	}
 }
 
@@ -119,4 +131,13 @@ func generateProxySQLQueryRules() (data []map[string]string) {
 		"apply":                 "1",
 	})
 	return data
+}
+
+func GetMysqlServerIDByPodName(podName string) (serverID int) {
+	arr := strings.Split(podName, "-")
+	if len(arr) > 1 {
+		serverID, _ = strconv.Atoi(arr[len(arr)-1])
+		serverID++
+	}
+	return serverID
 }

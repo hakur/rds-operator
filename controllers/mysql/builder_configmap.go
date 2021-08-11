@@ -10,7 +10,7 @@ import (
 )
 
 // buildSecret generate secret environment variables for mysql pods and proxysql pods
-func buildSecret(cr *rdsv1alpha1.Mysql) (cm *corev1.Secret) {
+func buildSecret(cr *rdsv1alpha1.Mysql) (secret *corev1.Secret) {
 	var seeds string
 	var mysqlUsers string
 	mysqlMaxConn := "300"
@@ -26,13 +26,13 @@ func buildSecret(cr *rdsv1alpha1.Mysql) (cm *corev1.Secret) {
 	buf, _ := json.Marshal(cr.Spec.Mysql.Users)
 	mysqlUsers = string(buf)
 
-	cm = new(corev1.Secret)
-	cm.APIVersion = "v1"
-	cm.Kind = "ConfigMap"
-	cm.Name = cr.Name + "-secret"
-	cm.Namespace = cr.Namespace
+	secret = new(corev1.Secret)
+	secret.APIVersion = "v1"
+	secret.Kind = "ConfigMap"
+	secret.Name = cr.Name + "-secret"
+	secret.Namespace = cr.Namespace
 
-	cm.Data = map[string][]byte{
+	secret.Data = map[string][]byte{
 		// pod
 		"TZ":                   []byte(cr.Spec.TimeZone),
 		"POD_DNS_SERVICE_NAME": []byte(cr.Name),
@@ -58,7 +58,7 @@ func buildSecret(cr *rdsv1alpha1.Mysql) (cm *corev1.Secret) {
 	}
 
 	if cr.Spec.Mysql.ExtraConfigDir != nil {
-		cm.Data["MYSQL_EXTRA_CONFIG_DIR"] = []byte(*cr.Spec.Mysql.ExtraConfigDir)
+		secret.Data["MYSQL_EXTRA_CONFIG_DIR"] = []byte(*cr.Spec.Mysql.ExtraConfigDir)
 	}
-	return cm
+	return secret
 }
