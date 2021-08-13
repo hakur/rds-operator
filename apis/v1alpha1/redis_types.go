@@ -28,6 +28,18 @@ type RedisServer struct {
 	Command []string `json:"command,omitempty"`
 	// Command redis container command args
 	Args []string `json:"args,omitempty"`
+	// Periodic probe of container liveness.
+	// Container will be restarted if the probe fails.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+	// +optional
+	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty" protobuf:"bytes,10,opt,name=livenessProbe"`
+	// Periodic probe of container service readiness.
+	// Container will be removed from service endpoints if the probe fails.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+	// +optional
+	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty" protobuf:"bytes,11,opt,name=readinessProbe"`
 }
 
 type RedisClusterPorxy struct {
@@ -49,6 +61,18 @@ type RedisClusterPorxy struct {
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty" protobuf:"bytes,8,opt,name=resources"`
+	// Periodic probe of container liveness.
+	// Container will be restarted if the probe fails.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+	// +optional
+	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty" protobuf:"bytes,10,opt,name=livenessProbe"`
+	// Periodic probe of container service readiness.
+	// Container will be removed from service endpoints if the probe fails.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+	// +optional
+	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty" protobuf:"bytes,11,opt,name=readinessProbe"`
 }
 
 // RedisSpec redis cluster spec

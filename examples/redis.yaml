@@ -3,7 +3,7 @@ apiVersion: rds.hakurei.cn/v1alpha1
 metadata:
   name: redis
 spec:
-  imagePullPolicy: IfNotPresent
+  imagePullPolicy: Always
   storageClassName: hostpath
   password: abc
   masterReplicas: 3
@@ -28,9 +28,63 @@ spec:
       fi
       
       /opt/bitnami/scripts/redis-cluster/entrypoint.sh /opt/bitnami/scripts/redis-cluster/run.sh
+    # readinessProbe:
+    #   exec:
+    #     command:
+    #     - /bin/bash
+    #     - -c
+    #     - |
+    #       redis-cli -a ${REDIS_PASSWORD} -p 6379 PING > /dev/null 2>&1
+    #       if [ $? != 0 ];then
+    #         echo "redis 6379 not ready"
+    #         exit 1
+    #       fi
+    #   initialDelaySeconds: 35
+    #   periodSeconds: 5
+    #   timeoutSeconds: 4
+    # livenessProbe:
+    #   exec:
+    #     command:
+    #     - /bin/bash
+    #     - -c
+    #     - |
+    #       redis-cli -a ${REDIS_PASSWORD} -p 6379 PING > /dev/null 2>&1
+    #       if [ $? != 0 ];then
+    #         echo "redis 6379 not ready"
+    #         exit 1
+    #       fi
+    #   initialDelaySeconds: 55
+    #   periodSeconds: 5
+    #   timeoutSeconds: 4
   proxy:
     image: rumia/redis-cluster-proxy:1.0-beta2
     replicas: 1
     nodePort: 32337 #set to zero if want use random nodeport,delete this field will disable nodeport
-  
-  
+    # readinessProbe:
+    #   exec:
+    #     command:
+    #     - /bin/bash
+    #     - -c
+    #     - |
+    #       redis-cli -a ${REDIS_PASSWORD} -p 6379 PING > /dev/null 2>&1
+    #       if [ $? != 0 ];then
+    #         echo "redis 6379 not ready"
+    #         exit 1
+    #       fi
+    #   initialDelaySeconds: 35
+    #   periodSeconds: 5
+    #   timeoutSeconds: 4
+    # livenessProbe:
+    #   exec:
+    #     command:
+    #     - /bin/bash
+    #     - -c
+    #     - |
+    #       redis-cli -a ${REDIS_PASSWORD} -p 6379 PING > /dev/null 2>&1
+    #       if [ $? != 0 ];then
+    #         echo "redis 6379 not ready"
+    #         exit 1
+    #       fi
+    #   initialDelaySeconds: 55
+    #   periodSeconds: 5
+    #   timeoutSeconds: 4

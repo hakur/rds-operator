@@ -149,6 +149,8 @@ func buildRedisContainer(cr *rdsv1alpha1.Redis) (container corev1.Container) {
 	container.Command = cr.Spec.Redis.Command
 	container.Args = cr.Spec.Redis.Args
 	container.Resources = cr.Spec.Resources
+	container.LivenessProbe = cr.Spec.Redis.LivenessProbe
+	container.ReadinessProbe = cr.Spec.Redis.ReadinessProbe
 
 	return container
 }

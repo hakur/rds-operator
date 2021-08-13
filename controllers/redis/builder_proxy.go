@@ -87,6 +87,8 @@ func buildPorxyContainer(cr *rdsv1alpha1.Redis) (container corev1.Container) {
 	container.Command = cr.Spec.Proxy.Command
 	container.Args = cr.Spec.Proxy.Args
 	container.Resources = cr.Spec.Resources
+	container.LivenessProbe = cr.Spec.Proxy.LivenessProbe
+	container.ReadinessProbe = cr.Spec.Proxy.ReadinessProbe
 
 	return container
 }

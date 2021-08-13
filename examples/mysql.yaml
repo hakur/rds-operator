@@ -3,6 +3,7 @@ apiVersion: rds.hakurei.cn/v1alpha1
 metadata:
   name: yuxing
 spec:
+  
   rootPassword: "zerocube"
   clusterMode: MGRSP
   backupPolicy: BackupDataDir
@@ -15,7 +16,7 @@ spec:
     replicas: 3
     storageSize: 1Gi
     maxConn: 300
-    whitelist:
+    whitelist: # most of time , it's kubernetes Pod CIDR and Service CIDR
       - "10.0.0.0/8"
     mgrsp:
       applierThreshold: 2500
@@ -39,6 +40,35 @@ spec:
         - "SELECT"
       username: mgr
     replicationUser: mgr
+    readinessProbe:
+      exec:
+        command:
+        - /bin/bash
+        - -c
+        - |
+          mysqladmin ping -u root -p${MYSQL_ROOT_PASSWORD} > /dev/null 2>&1
+          if [ $? != 0 ];then
+            echo "mysql 3306 not ready"
+            exit 1
+          fi
+      initialDelaySeconds: 15
+      periodSeconds: 5
+      timeoutSeconds: 4
+    livenessProbe:
+      exec:
+        command:
+        - /bin/bash
+        - -c
+        - |
+          primaryServer=$(mysql -uroot -p${MYSQL_ROOT_PASSWORD} -N -s -e "show status like 'group_replication_primary_member';" | awk '{print $2}')
+          if [ "$primaryServer" != "" ];then
+            exit 0
+          fi
+          echo "mysql primary server not found, mgr cluster not health!"
+          exit 1
+      initialDelaySeconds: 25
+      periodSeconds: 10
+      timeoutSeconds: 9
   proxysql: 
     image: rumia/proxysql:2.2.0
     mysqlVersion: "5.7.34"
@@ -48,3 +78,31 @@ spec:
     adminPassword: zerocube
     nodePort: 32336 #set to zero if want use random nodeport,delete this field will disable nodeport
     storageSize: 1Gi
+    readinessProbe:
+      exec:
+        command:
+          - /bin/bash
+          - -c
+          - |
+            mysqladmin ping -u${PROXYSQL_ADMIN_USER} -p${PROXYSQL_ADMIN_PASSWORD} -p6032 -h127.0.0.1 > /dev/null 2>&1
+            if [ $? != 0 ];then
+              echo "proxysql 6032 not ready"
+              exit 1
+            fi
+      initialDelaySeconds: 15
+      periodSeconds: 5
+      timeoutSeconds: 4
+    livenessProbe:
+      exec:
+         command:
+          - /bin/bash
+          - -c
+          - |
+            mysqladmin ping -u${PROXYSQL_ADMIN_USER} -p${PROXYSQL_ADMIN_PASSWORD} -p6032 -h127.0.0.1 > /dev/null 2>&1
+            if [ $? != 0 ];then
+              echo "proxysql 6032 not ready"
+              exit 1
+            fi
+      initialDelaySeconds: 25
+      periodSeconds: 10
+      timeoutSeconds: 9

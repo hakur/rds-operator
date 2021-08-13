@@ -64,6 +64,8 @@ func buildProxySQLContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container) 
 	container.VolumeMounts = buildProxySQLVolumeMounts()
 	container.EnvFrom = []corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: cr.Name + "-secret"}}}}
 	container.Resources = cr.Spec.ProxySQL.Resources
+	container.LivenessProbe = cr.Spec.ProxySQL.LivenessProbe
+	container.ReadinessProbe = cr.Spec.ProxySQL.ReadinessProbe
 	return container
 }
 
@@ -97,6 +99,8 @@ func buildProxySQLSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet, err error
 	podTemplateSpec.Spec.Containers = []corev1.Container{buildProxySQLContainer(cr)}
 	podTemplateSpec.Spec.PriorityClassName = cr.Spec.PriorityClassName
 	podTemplateSpec.Spec.Volumes = buildProxySQLVolume()
+	podTemplateSpec.Spec.Affinity = cr.Spec.Affinity
+	podTemplateSpec.Spec.Tolerations = cr.Spec.Tolerations
 
 	quantity, err := resource.ParseQuantity(cr.Spec.ProxySQL.StorageSize)
 	if err != nil {

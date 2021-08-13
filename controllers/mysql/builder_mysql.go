@@ -98,6 +98,8 @@ func buildMysqlContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container) {
 	container.VolumeMounts = buildMysqlVolumeMounts()
 	container.EnvFrom = []corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: cr.Name + "-secret"}}}}
 	container.Resources = cr.Spec.Mysql.Resources
+	container.LivenessProbe = cr.Spec.Mysql.LivenessProbe
+	container.ReadinessProbe = cr.Spec.Mysql.ReadinessProbe
 	return container
 }
 
@@ -155,6 +157,8 @@ func buildMysqlSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet, err error) {
 	podTemplateSpec.Spec.InitContainers = []corev1.Container{buildMysqlConfigContainer(cr)}
 	podTemplateSpec.Spec.Containers = []corev1.Container{buildMysqlContainer(cr), buildMysqlBootContainer(cr)}
 	podTemplateSpec.Spec.PriorityClassName = cr.Spec.PriorityClassName
+	podTemplateSpec.Spec.Affinity = cr.Spec.Affinity
+	podTemplateSpec.Spec.Tolerations = cr.Spec.Tolerations
 
 	quantity, err := resource.ParseQuantity(cr.Spec.Mysql.StorageSize)
 	if err != nil {
