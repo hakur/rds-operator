@@ -161,7 +161,7 @@ func buildMysqlSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet, err error) {
 		return nil, err
 	}
 
-	mysqlDataVolumeClaim.ObjectMeta = metav1.ObjectMeta{Name: "data", Labels: reconciler.BuildCRPVCLabels(cr.Name, cr.GroupVersionKind().String())} // use labels for gc , gc date is annotation types.PVCDeleteDateAnnotationName
+	mysqlDataVolumeClaim.ObjectMeta = metav1.ObjectMeta{Name: "data", Labels: reconciler.BuildCRPVCLabels(cr, cr)} // use labels for gc , gc date is annotation types.PVCDeleteDateAnnotationName
 	mysqlDataVolumeClaim.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"}
 	mysqlDataVolumeClaim.Spec.StorageClassName = &cr.Spec.StorageClassName
 	mysqlDataVolumeClaim.Spec.Resources = corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: quantity}}

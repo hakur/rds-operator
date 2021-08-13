@@ -51,8 +51,6 @@ func (t *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r ct
 		return r, client.IgnoreNotFound(err)
 	}
 
-	println("aaaaaaa")
-
 	return r, nil
 }
 
@@ -102,7 +100,7 @@ func (t *MysqlReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Mysql) (err
 		return err
 	}
 
-	if err = reconciler.RemovePVCRetentionMark(t.Client, ctx, cr.Namespace, reconciler.BuildCRPVCLabels(cr.Name, cr.GroupVersionKind().String())); err != nil {
+	if err = reconciler.RemovePVCRetentionMark(t.Client, ctx, cr.Namespace, reconciler.BuildCRPVCLabels(cr, cr)); err != nil {
 		return err
 	}
 
@@ -171,7 +169,7 @@ func (t *MysqlReconciler) applyMysql(ctx context.Context, cr *rdsv1alpha1.Mysql)
 
 // clean remove unreferenced sub resources, such as mark pvc delete date
 func (t *MysqlReconciler) clean(ctx context.Context, cr *rdsv1alpha1.Mysql) (err error) {
-	if err = reconciler.AddPVCRetentionMark(t.Client, ctx, cr.Namespace, reconciler.BuildCRPVCLabels(cr.Name, cr.GroupVersionKind().String())); err != nil {
+	if err = reconciler.AddPVCRetentionMark(t.Client, ctx, cr.Namespace, reconciler.BuildCRPVCLabels(cr, cr)); err != nil {
 		return err
 	}
 	return nil

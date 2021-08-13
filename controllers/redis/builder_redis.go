@@ -50,7 +50,7 @@ func buildRedisSts(cr *rdsv1alpha1.Redis) (sts *appsv1.StatefulSet, err error) {
 		return nil, err
 	}
 
-	dataVolumeClaim.ObjectMeta = metav1.ObjectMeta{Name: "data", Labels: reconciler.BuildCRPVCLabels(cr.Name, cr.GroupVersionKind().String())}
+	dataVolumeClaim.ObjectMeta = metav1.ObjectMeta{Name: "data", Labels: reconciler.BuildCRPVCLabels(cr, cr)}
 	dataVolumeClaim.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"}
 	dataVolumeClaim.Spec.StorageClassName = &cr.Spec.StorageClassName
 	dataVolumeClaim.Spec.Resources = corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: quantity}}

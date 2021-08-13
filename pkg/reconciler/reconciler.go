@@ -232,10 +232,11 @@ func RemovePVCRetentionMark(c client.Client, ctx context.Context, namespace stri
 }
 
 // BuildCRPVCLabels generate CR subresource pvc labels
-func BuildCRPVCLabels(crName, crGroupVersion string) map[string]string {
+func BuildCRPVCLabels(metaObj metav1.Object, obj runtime.Object) map[string]string {
+
 	return map[string]string{
-		"cr-name":          crName,
-		"cr-group-version": crGroupVersion,
+		"cr-name":          metaObj.GetName(),
+		"cr-group-version": obj.GetObjectKind().GroupVersionKind().Group + "___" + obj.GetObjectKind().GroupVersionKind().Version,
 	}
 }
 
