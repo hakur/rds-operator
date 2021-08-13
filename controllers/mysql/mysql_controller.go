@@ -51,7 +51,7 @@ func (t *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r ct
 		return r, client.IgnoreNotFound(err)
 	}
 
-	return r, nil
+	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

@@ -36,7 +36,7 @@ func ApplyService(c client.Client, ctx context.Context, data *corev1.Service, pa
 	} else {
 		// if service exists, update it
 		// set gc reference
-		if exists, err := CheckOwnerRefExists(parentObject, data); err != nil {
+		if exists, err := CheckOwnerRefExists(parentObject, data); err == nil {
 			if !exists {
 				if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
 					return fmt.Errorf("SetControllerReference error: %s", err.Error())
@@ -45,6 +45,7 @@ func ApplyService(c client.Client, ctx context.Context, data *corev1.Service, pa
 		} else {
 			return err
 		}
+
 		data.ResourceVersion = oldData.ResourceVersion
 		data.Spec.ClusterIP = oldData.Spec.ClusterIP
 		if err := c.Update(ctx, data); err != nil {
@@ -73,7 +74,7 @@ func ApplySecret(c client.Client, ctx context.Context, data *corev1.Secret, pare
 	} else {
 		// if secret exists, update it now
 		// set gc reference
-		if exists, err := CheckOwnerRefExists(parentObject, data); err != nil {
+		if exists, err := CheckOwnerRefExists(parentObject, data); err == nil {
 			if !exists {
 				if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
 					return fmt.Errorf("SetControllerReference error: %s", err.Error())
@@ -82,6 +83,7 @@ func ApplySecret(c client.Client, ctx context.Context, data *corev1.Secret, pare
 		} else {
 			return err
 		}
+
 		if err := c.Update(ctx, data); err != nil {
 			return err
 		}
@@ -109,7 +111,7 @@ func ApplyStatefulSet(c client.Client, ctx context.Context, data *appsv1.Statefu
 	} else {
 		// if deployment exists, update it
 		// set gc reference
-		if exists, err := CheckOwnerRefExists(parentObject, data); err != nil {
+		if exists, err := CheckOwnerRefExists(parentObject, data); err == nil {
 			if !exists {
 				if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
 					return fmt.Errorf("SetControllerReference error: %s", err.Error())
@@ -118,6 +120,7 @@ func ApplyStatefulSet(c client.Client, ctx context.Context, data *appsv1.Statefu
 		} else {
 			return err
 		}
+
 		if err := c.Update(ctx, data); err != nil {
 			return err
 		}
@@ -145,7 +148,7 @@ func ApplyConfigMap(c client.Client, ctx context.Context, data *corev1.ConfigMap
 	} else {
 		// if configMap exists, update it now
 		// set gc reference
-		if exists, err := CheckOwnerRefExists(parentObject, data); err != nil {
+		if exists, err := CheckOwnerRefExists(parentObject, data); err == nil {
 			if !exists {
 				if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
 					return fmt.Errorf("SetControllerReference error: %s", err.Error())
@@ -154,6 +157,7 @@ func ApplyConfigMap(c client.Client, ctx context.Context, data *corev1.ConfigMap
 		} else {
 			return err
 		}
+
 		if err := c.Update(ctx, data); err != nil {
 			return err
 		}
@@ -179,7 +183,7 @@ func ApplyDeployment(c client.Client, ctx context.Context, data *appsv1.Deployme
 	} else {
 		// if deployment exists, update it
 		// set gc reference
-		if exists, err := CheckOwnerRefExists(parentObject, data); err != nil {
+		if exists, err := CheckOwnerRefExists(parentObject, data); err == nil {
 			if !exists {
 				if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
 					return fmt.Errorf("SetControllerReference error: %s", err.Error())

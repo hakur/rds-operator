@@ -50,7 +50,7 @@ func (t *RedisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r ct
 		return r, client.IgnoreNotFound(err)
 	}
 
-	return
+	return ctrl.Result{}, nil
 }
 
 // checkDeleteOrApply check cr should delete or apply
