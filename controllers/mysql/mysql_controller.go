@@ -51,7 +51,9 @@ func (t *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r ct
 		return r, client.IgnoreNotFound(err)
 	}
 
-	return ctrl.Result{}, nil
+	println("aaaaaaa")
+
+	return r, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -59,6 +61,8 @@ func (t *MysqlReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&rdsv1alpha1.Mysql{}).
 		Owns(&corev1.Service{}).Owns(&appsv1.StatefulSet{}).Owns(&corev1.ConfigMap{}).Owns(&corev1.Secret{}).
+		// Watches(&source.Kind{Type: &corev1.PersistentVolumeClaim{}},
+		// 	&reconciler.PVCCleaner{}).
 		Complete(t)
 }
 
@@ -93,7 +97,16 @@ func (t *MysqlReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Mysql) (err
 	if err = t.applyMysql(ctx, cr); err != nil {
 		return err
 	}
-	return t.applyProxySQL(ctx, cr)
+
+	if err = t.applyProxySQL(ctx, cr); err != nil {
+		return err
+	}
+
+	if err = reconciler.RemovePVCRetentionMark(t.Client, ctx, cr.Namespace, reconciler.BuildCRPVCLabels(cr.Name, cr.GroupVersionKind().String())); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // applyProxySQL create or update proxySQL resources
@@ -158,5 +171,8 @@ func (t *MysqlReconciler) applyMysql(ctx context.Context, cr *rdsv1alpha1.Mysql)
 
 // clean remove unreferenced sub resources, such as mark pvc delete date
 func (t *MysqlReconciler) clean(ctx context.Context, cr *rdsv1alpha1.Mysql) (err error) {
+	if err = reconciler.AddPVCRetentionMark(t.Client, ctx, cr.Namespace, reconciler.BuildCRPVCLabels(cr.Name, cr.GroupVersionKind().String())); err != nil {
+		return err
+	}
 	return nil
 }

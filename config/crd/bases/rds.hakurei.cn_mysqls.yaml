@@ -841,7 +841,7 @@ spec:
                   and CR not found(filtered by labels), pvc will be deleted by operator.
                   if before deadline, a new CR with same labels of pvc created. pvc
                   deadline annotation will be removed. if this field value is nil,
-                  types.PVCDeleteRetentionDays will be default value to this field
+                  types.PVCDeleteRetentionSeconds will be default value to this field
                   if this field value is zero, pvc will alive forever
                 type: integer
               rootPassword:

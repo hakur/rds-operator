@@ -138,7 +138,7 @@ type MysqlSpec struct {
 	// after pvc deleted, a deadline annotations will add to pvc.
 	// if deadline reached (default time.Now().Unix() + PVCRetentionSeconds), and CR not found(filtered by labels), pvc will be deleted by operator.
 	// if before deadline, a new CR with same labels of pvc created. pvc deadline annotation will be removed.
-	// if this field value is nil, types.PVCDeleteRetentionDays will be default value to this field
+	// if this field value is nil, types.PVCDeleteRetentionSeconds will be default value to this field
 	// if this field value is zero, pvc will alive forever
 	PVCRetentionSeconds *int `json:"pvcRetentionSeconds,omitempty"`
 }

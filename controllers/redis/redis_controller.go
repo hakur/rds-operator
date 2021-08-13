@@ -87,10 +87,12 @@ func (t *RedisReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Redis) (err
 	if err != nil {
 		return err
 	}
+
 	deployment, err := buildProxyDeploy(cr)
 	if err != nil {
 		return err
 	}
+
 	redisService := buildRedisSvc(cr)
 	proxyService := buildProxySvc(cr)
 
@@ -112,10 +114,17 @@ func (t *RedisReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Redis) (err
 		return err
 	}
 
+	if err = reconciler.RemovePVCRetentionMark(t.Client, ctx, cr.Namespace, reconciler.BuildCRPVCLabels(cr.Name, cr.GroupVersionKind().String())); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // clean remove unreferenced sub resources, such as mark pvc delete date
 func (t *RedisReconciler) clean(ctx context.Context, cr *rdsv1alpha1.Redis) (err error) {
+	if err = reconciler.AddPVCRetentionMark(t.Client, ctx, cr.Namespace, reconciler.BuildCRPVCLabels(cr.Name, cr.GroupVersionKind().String())); err != nil {
+		return err
+	}
 	return nil
 }
