@@ -125,9 +125,9 @@ func ApplyDeployment(c client.Client, ctx context.Context, data *appsv1.Deployme
 }
 
 // AddPVCRetentionMark add deadline annottion to pvc
-func AddPVCRetentionMark(c client.Client, ctx context.Context, namespace string, labelSet map[string]string) (err error) {
+func AddPVCRetentionMark(c client.Client, ctx context.Context, namespace string, labelSelector map[string]string) (err error) {
 	var pvcs corev1.PersistentVolumeClaimList
-	if err = c.List(ctx, &pvcs, client.InNamespace(namespace), client.MatchingLabels(labelSet)); err != nil {
+	if err = c.List(ctx, &pvcs, client.InNamespace(namespace), client.MatchingLabels(labelSelector)); err == nil {
 		for _, pvc := range pvcs.Items {
 			if _, ok := pvc.Annotations[types.PVCDeleteDateAnnotationName]; !ok {
 				pvc.Annotations[types.PVCDeleteDateAnnotationName] = strconv.FormatInt(time.Now().Unix()+types.PVCDeleteRetentionSeconds, 10)
@@ -138,7 +138,7 @@ func AddPVCRetentionMark(c client.Client, ctx context.Context, namespace string,
 		}
 	}
 
-	return nil
+	return err
 }
 
 // RemovePVCRetentionMark delete deadline annottion from pvc

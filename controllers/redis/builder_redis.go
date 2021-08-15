@@ -23,7 +23,7 @@ func buildRedisSts(cr *rdsv1alpha1.Redis) (sts *appsv1.StatefulSet, err error) {
 	sts = new(appsv1.StatefulSet)
 
 	sts.ObjectMeta = metav1.ObjectMeta{
-		Name:      cr.Name,
+		Name:      cr.Name + "-redis",
 		Namespace: cr.Namespace,
 		Labels:    buildRedisLabels(cr),
 	}
@@ -34,7 +34,7 @@ func buildRedisSts(cr *rdsv1alpha1.Redis) (sts *appsv1.StatefulSet, err error) {
 	}
 
 	spec.Replicas = &replicas
-	spec.ServiceName = cr.Name
+	spec.ServiceName = cr.Name + "-redis"
 	spec.Selector = &metav1.LabelSelector{MatchLabels: buildRedisLabels(cr)}
 	spec.PodManagementPolicy = appsv1.ParallelPodManagement
 
@@ -68,7 +68,7 @@ func buildRedisSvc(cr *rdsv1alpha1.Redis) (svc *corev1.Service) {
 	svc = new(corev1.Service)
 
 	svc.ObjectMeta = metav1.ObjectMeta{
-		Name:      cr.Name,
+		Name:      cr.Name + "-redis",
 		Namespace: cr.Namespace,
 		Labels:    buildRedisLabels(cr),
 	}
@@ -121,7 +121,7 @@ func buildRedisContainer(cr *rdsv1alpha1.Redis) (container corev1.Container) {
 	}
 
 	for i := 0; i < caculateReplicas(cr); i++ {
-		nodes = append(nodes, cr.Name+"-"+strconv.Itoa(i)+"."+svc.Name)
+		nodes = append(nodes, cr.Name+"-redis-"+strconv.Itoa(i)+"."+svc.Name)
 	}
 
 	container.Image = cr.Spec.Redis.Image

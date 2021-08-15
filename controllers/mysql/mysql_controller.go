@@ -237,6 +237,7 @@ func (t *MysqlReconciler) clean(ctx context.Context, cr *rdsv1alpha1.Mysql) (err
 		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
 	}
 
+	// add pvc life deadline annotaion mark
 	if err = reconciler.AddPVCRetentionMark(t.Client, ctx, cr.Namespace, reconciler.BuildCRPVCLabels(cr, cr)); err != nil {
 		return err
 	}

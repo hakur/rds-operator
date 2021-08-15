@@ -137,7 +137,7 @@ func buildMysqlSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet, err error) {
 	sts = new(appsv1.StatefulSet)
 
 	sts.ObjectMeta = metav1.ObjectMeta{
-		Name:      cr.Name,
+		Name:      cr.Name + "-mysql",
 		Namespace: cr.Namespace,
 		Labels:    buildMysqlLabels(cr),
 	}
@@ -148,7 +148,7 @@ func buildMysqlSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet, err error) {
 	}
 
 	spec.Replicas = cr.Spec.Mysql.Replicas
-	spec.ServiceName = cr.Name
+	spec.ServiceName = cr.Name + "-mysql"
 	spec.Selector = &metav1.LabelSelector{MatchLabels: buildMysqlLabels(cr)}
 
 	podTemplateSpec.ObjectMeta = metav1.ObjectMeta{Labels: buildMysqlLabels(cr)}
@@ -182,7 +182,7 @@ func buildMysqlService(cr *rdsv1alpha1.Mysql) (svc *corev1.Service) {
 	svc = new(corev1.Service)
 
 	svc.ObjectMeta = metav1.ObjectMeta{
-		Name:      cr.Name,
+		Name:      cr.Name + "-mysql",
 		Namespace: cr.Namespace,
 		Labels:    buildMysqlLabels(cr),
 	}
@@ -212,7 +212,7 @@ func buildMysqlContainerServices(cr *rdsv1alpha1.Mysql) (services []*corev1.Serv
 		svc := new(corev1.Service)
 
 		svc.ObjectMeta = metav1.ObjectMeta{
-			Name:      cr.Name + "-" + strconv.Itoa(i),
+			Name:      cr.Name + "-mysql-" + strconv.Itoa(i),
 			Namespace: cr.Namespace,
 			Labels:    buildMysqlLabels(cr),
 		}
@@ -223,7 +223,7 @@ func buildMysqlContainerServices(cr *rdsv1alpha1.Mysql) (services []*corev1.Serv
 		}
 
 		spec.Selector = buildMysqlLabels(cr)
-		spec.Selector["statefulset.kubernetes.io/pod-name"] = cr.Name + "-" + strconv.Itoa(i)
+		spec.Selector["statefulset.kubernetes.io/pod-name"] = cr.Name + "-mysql-" + strconv.Itoa(i)
 
 		spec.Ports = []corev1.ServicePort{
 			{Name: "mysql", Port: 3306},

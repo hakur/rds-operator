@@ -70,7 +70,7 @@ func buildPorxyContainer(cr *rdsv1alpha1.Redis) (container corev1.Container) {
 	}
 
 	for i := 0; i < caculateReplicas(cr); i++ {
-		nodes = append(nodes, cr.Name+"-"+strconv.Itoa(i)+"."+svc.Name+":6379")
+		nodes = append(nodes, cr.Name+"-redis-"+strconv.Itoa(i)+"."+svc.Name+":6379")
 	}
 
 	container.Image = cr.Spec.Proxy.Image

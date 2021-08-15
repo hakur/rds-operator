@@ -19,7 +19,7 @@ func buildSecret(cr *rdsv1alpha1.Mysql) (secret *corev1.Secret) {
 	}
 
 	for i := 0; i < int(*cr.Spec.Mysql.Replicas); i++ {
-		seeds += cr.Name + "-" + strconv.Itoa(i) + ":33061,"
+		seeds += cr.Name + "-mysql-" + strconv.Itoa(i) + ":33061,"
 	}
 	seeds = strings.Trim(seeds, ",")
 
