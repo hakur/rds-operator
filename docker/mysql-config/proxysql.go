@@ -71,13 +71,13 @@ func gernateProxySQLConfig() {
 		logrus.Fatal("mysql slave member list less than 1")
 	}
 
-	// cw.MysqlUsers = append(cw.MysqlUsers, map[string]string{
-	// 	"username":               "root",
-	// 	"password":               *mysqlRootPassword,
-	// 	"default_hostgroup":      "1",
-	// 	"transaction_persistent": "1",
-	// 	"active":                 "1",
-	// })
+	cw.MysqlUsers = append(cw.MysqlUsers, map[string]string{
+		"username":               "root",
+		"password":               *mysqlRootPassword,
+		"default_hostgroup":      "1",
+		"transaction_persistent": "1",
+		"active":                 "1",
+	})
 
 	cw.MysqlQueryRules = generateProxySQLQueryRules()
 	cw.Scheduler = append(cw.Scheduler, map[string]string{

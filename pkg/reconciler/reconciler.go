@@ -142,11 +142,11 @@ func AddPVCRetentionMark(c client.Client, ctx context.Context, namespace string,
 }
 
 // RemovePVCRetentionMark delete deadline annottion from pvc
-func RemovePVCRetentionMark(c client.Client, ctx context.Context, namespace string, labelSet map[string]string) (err error) {
+func RemovePVCRetentionMark(c client.Client, ctx context.Context, namespace string, labelSelector map[string]string) (err error) {
 	var pvcs corev1.PersistentVolumeClaimList
-	if err = c.List(ctx, &pvcs, client.InNamespace(namespace), client.MatchingLabels(labelSet)); err != nil {
+	if err = c.List(ctx, &pvcs, client.InNamespace(namespace), client.MatchingLabels(labelSelector)); err == nil {
 		for _, pvc := range pvcs.Items {
-			if _, ok := pvc.Annotations[types.PVCDeleteDateAnnotationName]; !ok {
+			if _, ok := pvc.Annotations[types.PVCDeleteDateAnnotationName]; ok {
 				delete(pvc.Annotations, types.PVCDeleteDateAnnotationName)
 				if err = c.Update(ctx, &pvc); err != nil {
 					return err
@@ -155,7 +155,7 @@ func RemovePVCRetentionMark(c client.Client, ctx context.Context, namespace stri
 		}
 	}
 
-	return nil
+	return err
 }
 
 // BuildCRPVCLabels generate CR subresource pvc labels
