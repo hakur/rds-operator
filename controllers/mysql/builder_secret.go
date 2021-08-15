@@ -31,6 +31,7 @@ func buildSecret(cr *rdsv1alpha1.Mysql) (secret *corev1.Secret) {
 	secret.Kind = "ConfigMap"
 	secret.Name = cr.Name + "-secret"
 	secret.Namespace = cr.Namespace
+	secret.Labels = buildMysqlLabels(cr)
 
 	secret.Data = map[string][]byte{
 		// pod

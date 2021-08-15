@@ -2,7 +2,10 @@ package mysql
 
 import (
 	"context"
+	"fmt"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -56,9 +59,7 @@ func (t *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r ct
 func (t *MysqlReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&rdsv1alpha1.Mysql{}).
-		// Owns(&corev1.Service{}).Owns(&appsv1.StatefulSet{}).Owns(&corev1.ConfigMap{}).Owns(&corev1.Secret{}). // Warning!!! do not open this line, will cause controller Reconcile loop,then get stuck in memory leak, beacause I have called reconciler.Apllyxxxx functions, this Apllyxxxx fucntions already called ctrl.SetControllerReference， so there is no require for manual gc. but gc interface in this controller "clean" function, if you want do some extra gc
-		// Watches(&source.Kind{Type: &corev1.PersistentVolumeClaim{}},
-		// 	&reconciler.PVCCleaner{}).
+		Owns(&corev1.Service{}).Owns(&appsv1.StatefulSet{}).Owns(&corev1.ConfigMap{}).Owns(&corev1.Secret{}).
 		Complete(t)
 }
 
@@ -165,10 +166,80 @@ func (t *MysqlReconciler) applyMysql(ctx context.Context, cr *rdsv1alpha1.Mysql)
 	return nil
 }
 
-// clean remove unreferenced sub resources, such as mark pvc delete date
+// clean unreferenced sub resources
 func (t *MysqlReconciler) clean(ctx context.Context, cr *rdsv1alpha1.Mysql) (err error) {
+	// clean mysql sub resources
+	var mysqlStatefulSets appsv1.StatefulSetList
+	if err = t.List(ctx, &mysqlStatefulSets, client.InNamespace(cr.Namespace), client.MatchingLabels(buildMysqlLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+		for _, v := range mysqlStatefulSets.Items {
+			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
+			}
+		}
+	} else {
+		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
+	}
+
+	var mysqlServices corev1.ServiceList
+	if err = t.List(ctx, &mysqlServices, client.InNamespace(cr.Namespace), client.MatchingLabels(buildMysqlLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+		for _, v := range mysqlServices.Items {
+			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
+			}
+		}
+	} else {
+		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
+	}
+
+	// clean proxysql sub resources
+	var proxySQLStatefulSets appsv1.StatefulSetList
+	if err = t.List(ctx, &proxySQLStatefulSets, client.InNamespace(cr.Namespace), client.MatchingLabels(buildProxySQLLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+		for _, v := range proxySQLStatefulSets.Items {
+			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
+			}
+		}
+	} else {
+		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
+	}
+
+	var proxyServices corev1.ServiceList
+	if err = t.List(ctx, &proxyServices, client.InNamespace(cr.Namespace), client.MatchingLabels(buildProxySQLLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+		for _, v := range proxyServices.Items {
+			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
+			}
+		}
+	} else {
+		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
+	}
+
+	// clean common sub resources
+	var configMaps corev1.ConfigMapList
+	if err = t.List(ctx, &configMaps, client.InNamespace(cr.Namespace), client.MatchingLabels(buildMysqlLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+		for _, v := range configMaps.Items {
+			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
+			}
+		}
+	} else {
+		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
+	}
+
+	var secrets corev1.SecretList
+	if err = t.List(ctx, &secrets, client.InNamespace(cr.Namespace), client.MatchingLabels(buildMysqlLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+		for _, v := range secrets.Items {
+			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
+			}
+		}
+	} else {
+		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
+	}
+
 	if err = reconciler.AddPVCRetentionMark(t.Client, ctx, cr.Namespace, reconciler.BuildCRPVCLabels(cr, cr)); err != nil {
 		return err
 	}
+
 	return nil
 }

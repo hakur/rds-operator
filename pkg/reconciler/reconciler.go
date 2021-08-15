@@ -3,7 +3,6 @@ package reconciler
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -12,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -21,10 +19,6 @@ func ApplyService(c client.Client, ctx context.Context, data *corev1.Service, pa
 	var oldData corev1.Service
 	if err := c.Get(ctx, client.ObjectKeyFromObject(data), &oldData); err != nil {
 		if err := client.IgnoreNotFound(err); err == nil {
-			// set gc reference
-			if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
-				return fmt.Errorf("SetControllerReference error: %s", err.Error())
-			}
 			//if service not exists, create it
 			if err := c.Create(ctx, data); err != nil {
 				return err
@@ -33,16 +27,10 @@ func ApplyService(c client.Client, ctx context.Context, data *corev1.Service, pa
 			return err
 		}
 	} else {
-		if !CheckOwnerRefExists(parentObject, oldData.OwnerReferences) {
-			// set gc reference
-			if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
-				return fmt.Errorf("SetControllerReference error: %s", err.Error())
-			}
-		}
-
+		// if service exists, update it now
 		data.ResourceVersion = oldData.ResourceVersion
 		data.Spec.ClusterIP = oldData.Spec.ClusterIP
-		//if err := c.Patch(ctx, &oldData, client.MergeFrom(data)); err != nil {
+
 		if err := c.Update(ctx, data); err != nil {
 			return err
 		}
@@ -56,10 +44,6 @@ func ApplySecret(c client.Client, ctx context.Context, data *corev1.Secret, pare
 	if err := c.Get(ctx, client.ObjectKeyFromObject(data), &oldData); err != nil {
 		if err := client.IgnoreNotFound(err); err == nil {
 			// if secret not exists, create it now
-			// set gc reference
-			if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
-				return fmt.Errorf("SetControllerReference error: %s", err.Error())
-			}
 			if err := c.Create(ctx, data); err != nil {
 				return err
 			}
@@ -82,10 +66,6 @@ func ApplyStatefulSet(c client.Client, ctx context.Context, data *appsv1.Statefu
 	if err := c.Get(ctx, client.ObjectKeyFromObject(data), &oldData); err != nil {
 		if err := client.IgnoreNotFound(err); err == nil {
 			// if deployment not exist, create it
-			// set gc reference
-			if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
-				return fmt.Errorf("SetControllerReference error: %s", err.Error())
-			}
 			if err := c.Create(ctx, data); err != nil {
 				return err
 			}
@@ -108,10 +88,6 @@ func ApplyConfigMap(c client.Client, ctx context.Context, data *corev1.ConfigMap
 	if err := c.Get(ctx, client.ObjectKeyFromObject(data), &oldData); err != nil {
 		if err := client.IgnoreNotFound(err); err == nil {
 			// if configMap not exists, create it now
-			// set gc reference
-			if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
-				return fmt.Errorf("SetControllerReference error: %s", err.Error())
-			}
 			if err := c.Create(ctx, data); err != nil {
 				return err
 			}
@@ -132,10 +108,6 @@ func ApplyDeployment(c client.Client, ctx context.Context, data *appsv1.Deployme
 	if err := c.Get(ctx, client.ObjectKeyFromObject(data), &oldData); err != nil {
 		if err := client.IgnoreNotFound(err); err == nil {
 			// if deployment not exist, create it
-			// set gc reference
-			if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
-				return fmt.Errorf("SetControllerReference error: %s", err.Error())
-			}
 			if err := c.Create(ctx, data); err != nil {
 				return err
 			}

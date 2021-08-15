@@ -2,10 +2,13 @@ package redis
 
 import (
 	"context"
+	"fmt"
 
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
 	"github.com/hakur/rds-operator/pkg/reconciler"
 	"github.com/hakur/rds-operator/util"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,7 +36,7 @@ type RedisReconciler struct {
 func (t *RedisReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&rdsv1alpha1.Redis{}).
-		//Owns(&corev1.Service{}).Owns(&appsv1.StatefulSet{}).Owns(&corev1.ConfigMap{}).Owns(&appsv1.Deployment{}). //Warning!!! do not open this line, will cause controller Reconcile loop,then get stuck in memory leak, beacause I have called reconciler.Apllyxxxx functions, this Apllyxxxx fucntions already called ctrl.SetControllerReference， so there is no require for manual gc. but gc interface in this controller "clean" function, if you want do some extra gc
+		Owns(&corev1.Service{}).Owns(&appsv1.StatefulSet{}).Owns(&corev1.ConfigMap{}).Owns(&appsv1.Deployment{}).
 		Complete(t)
 }
 
@@ -119,8 +122,54 @@ func (t *RedisReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Redis) (err
 	return nil
 }
 
-// clean remove unreferenced sub resources, such as mark pvc delete date
+// clean remove sub resources
 func (t *RedisReconciler) clean(ctx context.Context, cr *rdsv1alpha1.Redis) (err error) {
+	//clean redis sub resources
+	var redisStatefulSets appsv1.StatefulSetList
+	if err = t.List(ctx, &redisStatefulSets, client.InNamespace(cr.Namespace), client.MatchingLabels(buildRedisLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+		for _, v := range redisStatefulSets.Items {
+			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
+			}
+		}
+	} else {
+		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
+	}
+
+	var redisServices corev1.ServiceList
+	if err = t.List(ctx, &redisServices, client.InNamespace(cr.Namespace), client.MatchingLabels(buildRedisLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+		for _, v := range redisServices.Items {
+			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
+			}
+		}
+	} else {
+		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
+	}
+
+	// clean redis cluster proxy sub resources
+	var redisClusterProxyDeployments appsv1.DeploymentList
+	if err = t.List(ctx, &redisClusterProxyDeployments, client.InNamespace(cr.Namespace), client.MatchingLabels(buildProxyLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+		for _, v := range redisClusterProxyDeployments.Items {
+			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
+			}
+		}
+	} else {
+		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
+	}
+
+	var redisClusterProxyServices corev1.ServiceList
+	if err = t.List(ctx, &redisClusterProxyServices, client.InNamespace(cr.Namespace), client.MatchingLabels(buildProxyLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+		for _, v := range redisClusterProxyServices.Items {
+			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
+			}
+		}
+	} else {
+		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
+	}
+
 	if err = reconciler.AddPVCRetentionMark(t.Client, ctx, cr.Namespace, reconciler.BuildCRPVCLabels(cr, cr)); err != nil {
 		return err
 	}
