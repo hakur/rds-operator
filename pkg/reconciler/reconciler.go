@@ -12,7 +12,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -34,20 +33,16 @@ func ApplyService(c client.Client, ctx context.Context, data *corev1.Service, pa
 			return err
 		}
 	} else {
-		// if service exists, update it
-		// set gc reference
-		if exists, err := CheckOwnerRefExists(parentObject, data); err == nil {
-			if !exists {
-				if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
-					return fmt.Errorf("SetControllerReference error: %s", err.Error())
-				}
+		if !CheckOwnerRefExists(parentObject, oldData.OwnerReferences) {
+			// set gc reference
+			if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
+				return fmt.Errorf("SetControllerReference error: %s", err.Error())
 			}
-		} else {
-			return err
 		}
 
 		data.ResourceVersion = oldData.ResourceVersion
 		data.Spec.ClusterIP = oldData.Spec.ClusterIP
+		//if err := c.Patch(ctx, &oldData, client.MergeFrom(data)); err != nil {
 		if err := c.Update(ctx, data); err != nil {
 			return err
 		}
@@ -73,17 +68,6 @@ func ApplySecret(c client.Client, ctx context.Context, data *corev1.Secret, pare
 		}
 	} else {
 		// if secret exists, update it now
-		// set gc reference
-		if exists, err := CheckOwnerRefExists(parentObject, data); err == nil {
-			if !exists {
-				if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
-					return fmt.Errorf("SetControllerReference error: %s", err.Error())
-				}
-			}
-		} else {
-			return err
-		}
-
 		if err := c.Update(ctx, data); err != nil {
 			return err
 		}
@@ -110,17 +94,6 @@ func ApplyStatefulSet(c client.Client, ctx context.Context, data *appsv1.Statefu
 		}
 	} else {
 		// if deployment exists, update it
-		// set gc reference
-		if exists, err := CheckOwnerRefExists(parentObject, data); err == nil {
-			if !exists {
-				if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
-					return fmt.Errorf("SetControllerReference error: %s", err.Error())
-				}
-			}
-		} else {
-			return err
-		}
-
 		if err := c.Update(ctx, data); err != nil {
 			return err
 		}
@@ -147,17 +120,6 @@ func ApplyConfigMap(c client.Client, ctx context.Context, data *corev1.ConfigMap
 		}
 	} else {
 		// if configMap exists, update it now
-		// set gc reference
-		if exists, err := CheckOwnerRefExists(parentObject, data); err == nil {
-			if !exists {
-				if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
-					return fmt.Errorf("SetControllerReference error: %s", err.Error())
-				}
-			}
-		} else {
-			return err
-		}
-
 		if err := c.Update(ctx, data); err != nil {
 			return err
 		}
@@ -182,17 +144,6 @@ func ApplyDeployment(c client.Client, ctx context.Context, data *appsv1.Deployme
 		}
 	} else {
 		// if deployment exists, update it
-		// set gc reference
-		if exists, err := CheckOwnerRefExists(parentObject, data); err == nil {
-			if !exists {
-				if err := ctrl.SetControllerReference(parentObject, data, scheme); err != nil {
-					return fmt.Errorf("SetControllerReference error: %s", err.Error())
-				}
-			}
-		} else {
-			return err
-		}
-
 		if err := c.Update(ctx, data); err != nil {
 			return err
 		}
@@ -237,7 +188,6 @@ func RemovePVCRetentionMark(c client.Client, ctx context.Context, namespace stri
 
 // BuildCRPVCLabels generate CR subresource pvc labels
 func BuildCRPVCLabels(metaObj metav1.Object, obj runtime.Object) map[string]string {
-
 	return map[string]string{
 		"cr-name":          metaObj.GetName(),
 		"cr-group-version": obj.GetObjectKind().GroupVersionKind().Group + "___" + obj.GetObjectKind().GroupVersionKind().Version,
@@ -245,39 +195,22 @@ func BuildCRPVCLabels(metaObj metav1.Object, obj runtime.Object) map[string]stri
 }
 
 // CheckOwnerRefExists check onwer reference exists
-func CheckOwnerRefExists(owner metav1.Object, controlled metav1.Object) (refExists bool, err error) {
-	var obkind schema.ObjectKind
-	if runtimeObj, ok := owner.(runtime.Object); !ok {
-		return false, fmt.Errorf("owner [%s:%s/%s] cannot assert to a runtime.Object", owner.GetResourceVersion(), owner.GetNamespace(), owner.GetName())
-	} else {
-		obkind = runtimeObj.GetObjectKind()
-	}
-
-	refExists = true
-
-	for _, ref := range controlled.GetOwnerReferences() {
-
+func CheckOwnerRefExists(owner metav1.Object, refs []metav1.OwnerReference) (refExists bool) {
+	for _, ref := range refs {
+		refEqual := true
 		if ref.UID != owner.GetUID() {
-			refExists = false
-		}
-
-		if ref.APIVersion != obkind.GroupVersionKind().Version {
-			refExists = false
-		}
-
-		if ref.Kind != obkind.GroupVersionKind().Kind {
-			refExists = false
+			refEqual = false
 		}
 
 		if ref.Name != owner.GetName() {
-
-			refExists = false
+			refEqual = false
 		}
 
-		if refExists {
+		if refEqual {
+			refExists = true
 			break
 		}
 	}
 
-	return refExists, nil
+	return refExists
 }

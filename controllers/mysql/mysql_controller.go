@@ -3,8 +3,6 @@ package mysql
 import (
 	"context"
 
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -58,7 +56,7 @@ func (t *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r ct
 func (t *MysqlReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&rdsv1alpha1.Mysql{}).
-		Owns(&corev1.Service{}).Owns(&appsv1.StatefulSet{}).Owns(&corev1.ConfigMap{}).Owns(&corev1.Secret{}).
+		// Owns(&corev1.Service{}).Owns(&appsv1.StatefulSet{}).Owns(&corev1.ConfigMap{}).Owns(&corev1.Secret{}). // Warning!!! do not open this line, will cause controller Reconcile loop,then get stuck in memory leak, beacause I have called reconciler.Apllyxxxx functions, this Apllyxxxx fucntions already called ctrl.SetControllerReference， so there is no require for manual gc. but gc interface in this controller "clean" function, if you want do some extra gc
 		// Watches(&source.Kind{Type: &corev1.PersistentVolumeClaim{}},
 		// 	&reconciler.PVCCleaner{}).
 		Complete(t)

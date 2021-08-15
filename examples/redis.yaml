@@ -3,7 +3,7 @@ apiVersion: rds.hakurei.cn/v1alpha1
 metadata:
   name: redis
 spec:
-  imagePullPolicy: Always
+  imagePullPolicy: IfNotPresent
   storageClassName: hostpath
   password: abc
   masterReplicas: 3

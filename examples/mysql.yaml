@@ -3,7 +3,7 @@ apiVersion: rds.hakurei.cn/v1alpha1
 metadata:
   name: yuxing
 spec:
-  
+  imagePullPolicy: IfNotPresent
   rootPassword: "zerocube"
   clusterMode: MGRSP
   backupPolicy: BackupDataDir
