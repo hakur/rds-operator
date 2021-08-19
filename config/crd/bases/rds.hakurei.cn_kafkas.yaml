@@ -6,20 +6,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.4.1
   creationTimestamp: null
-  name: redis.rds.hakurei.cn
+  name: kafkas.rds.hakurei.cn
 spec:
   group: rds.hakurei.cn
   names:
-    kind: Redis
-    listKind: RedisList
-    plural: redis
-    singular: redis
+    kind: Kafka
+    listKind: KafkaList
+    plural: kafkas
+    singular: kafka
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Redis redis cluster CRD
+        description: Kafka Kafka cluster CRD
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -34,8 +34,296 @@ spec:
           metadata:
             type: object
           spec:
-            description: RedisSpec redis cluster spec
+            description: KafkaSpec Kafka cluster spec
             properties:
+              Kafka:
+                properties:
+                  args:
+                    description: Command Kafka container command args
+                    items:
+                      type: string
+                    type: array
+                  command:
+                    description: Command Kafka container command
+                    items:
+                      type: string
+                    type: array
+                  image:
+                    description: Image Kafka server image
+                    type: string
+                  livenessProbe:
+                    description: 'Periodic probe of container liveness. Container
+                      will be restarted if the probe fails. Cannot be updated. More
+                      info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                    properties:
+                      exec:
+                        description: One and only one of the following should be specified.
+                          Exec specifies the action to take.
+                        properties:
+                          command:
+                            description: Command is the command line to execute inside
+                              the container, the working directory for the command  is
+                              root ('/') in the container's filesystem. The command
+                              is simply exec'd, it is not run inside a shell, so traditional
+                              shell instructions ('|', etc) won't work. To use a shell,
+                              you need to explicitly call out to that shell. Exit
+                              status of 0 is treated as live/healthy and non-zero
+                              is unhealthy.
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                      failureThreshold:
+                        description: Minimum consecutive failures for the probe to
+                          be considered failed after having succeeded. Defaults to
+                          3. Minimum value is 1.
+                        format: int32
+                        type: integer
+                      httpGet:
+                        description: HTTPGet specifies the http request to perform.
+                        properties:
+                          host:
+                            description: Host name to connect to, defaults to the
+                              pod IP. You probably want to set "Host" in httpHeaders
+                              instead.
+                            type: string
+                          httpHeaders:
+                            description: Custom headers to set in the request. HTTP
+                              allows repeated headers.
+                            items:
+                              description: HTTPHeader describes a custom header to
+                                be used in HTTP probes
+                              properties:
+                                name:
+                                  description: The header field name
+                                  type: string
+                                value:
+                                  description: The header field value
+                                  type: string
+                              required:
+                              - name
+                              - value
+                              type: object
+                            type: array
+                          path:
+                            description: Path to access on the HTTP server.
+                            type: string
+                          port:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: Name or number of the port to access on the
+                              container. Number must be in the range 1 to 65535. Name
+                              must be an IANA_SVC_NAME.
+                            x-kubernetes-int-or-string: true
+                          scheme:
+                            description: Scheme to use for connecting to the host.
+                              Defaults to HTTP.
+                            type: string
+                        required:
+                        - port
+                        type: object
+                      initialDelaySeconds:
+                        description: 'Number of seconds after the container has started
+                          before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                        format: int32
+                        type: integer
+                      periodSeconds:
+                        description: How often (in seconds) to perform the probe.
+                          Default to 10 seconds. Minimum value is 1.
+                        format: int32
+                        type: integer
+                      successThreshold:
+                        description: Minimum consecutive successes for the probe to
+                          be considered successful after having failed. Defaults to
+                          1. Must be 1 for liveness and startup. Minimum value is
+                          1.
+                        format: int32
+                        type: integer
+                      tcpSocket:
+                        description: 'TCPSocket specifies an action involving a TCP
+                          port. TCP hooks not yet supported TODO: implement a realistic
+                          TCP lifecycle hook'
+                        properties:
+                          host:
+                            description: 'Optional: Host name to connect to, defaults
+                              to the pod IP.'
+                            type: string
+                          port:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: Number or name of the port to access on the
+                              container. Number must be in the range 1 to 65535. Name
+                              must be an IANA_SVC_NAME.
+                            x-kubernetes-int-or-string: true
+                        required:
+                        - port
+                        type: object
+                      terminationGracePeriodSeconds:
+                        description: Optional duration in seconds the pod needs to
+                          terminate gracefully upon probe failure. The grace period
+                          is the duration in seconds after the processes running in
+                          the pod are sent a termination signal and the time when
+                          the processes are forcibly halted with a kill signal. Set
+                          this value longer than the expected cleanup time for your
+                          process. If this value is nil, the pod's terminationGracePeriodSeconds
+                          will be used. Otherwise, this value overrides the value
+                          provided by the pod spec. Value must be non-negative integer.
+                          The value zero indicates stop immediately via the kill signal
+                          (no opportunity to shut down). This is a beta field and
+                          requires enabling ProbeTerminationGracePeriod feature gate.
+                          Minimum value is 1. spec.terminationGracePeriodSeconds is
+                          used if unset.
+                        format: int64
+                        type: integer
+                      timeoutSeconds:
+                        description: 'Number of seconds after which the probe times
+                          out. Defaults to 1 second. Minimum value is 1. More info:
+                          https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                        format: int32
+                        type: integer
+                    type: object
+                  readinessProbe:
+                    description: 'Periodic probe of container service readiness. Container
+                      will be removed from service endpoints if the probe fails. Cannot
+                      be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                    properties:
+                      exec:
+                        description: One and only one of the following should be specified.
+                          Exec specifies the action to take.
+                        properties:
+                          command:
+                            description: Command is the command line to execute inside
+                              the container, the working directory for the command  is
+                              root ('/') in the container's filesystem. The command
+                              is simply exec'd, it is not run inside a shell, so traditional
+                              shell instructions ('|', etc) won't work. To use a shell,
+                              you need to explicitly call out to that shell. Exit
+                              status of 0 is treated as live/healthy and non-zero
+                              is unhealthy.
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                      failureThreshold:
+                        description: Minimum consecutive failures for the probe to
+                          be considered failed after having succeeded. Defaults to
+                          3. Minimum value is 1.
+                        format: int32
+                        type: integer
+                      httpGet:
+                        description: HTTPGet specifies the http request to perform.
+                        properties:
+                          host:
+                            description: Host name to connect to, defaults to the
+                              pod IP. You probably want to set "Host" in httpHeaders
+                              instead.
+                            type: string
+                          httpHeaders:
+                            description: Custom headers to set in the request. HTTP
+                              allows repeated headers.
+                            items:
+                              description: HTTPHeader describes a custom header to
+                                be used in HTTP probes
+                              properties:
+                                name:
+                                  description: The header field name
+                                  type: string
+                                value:
+                                  description: The header field value
+                                  type: string
+                              required:
+                              - name
+                              - value
+                              type: object
+                            type: array
+                          path:
+                            description: Path to access on the HTTP server.
+                            type: string
+                          port:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: Name or number of the port to access on the
+                              container. Number must be in the range 1 to 65535. Name
+                              must be an IANA_SVC_NAME.
+                            x-kubernetes-int-or-string: true
+                          scheme:
+                            description: Scheme to use for connecting to the host.
+                              Defaults to HTTP.
+                            type: string
+                        required:
+                        - port
+                        type: object
+                      initialDelaySeconds:
+                        description: 'Number of seconds after the container has started
+                          before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                        format: int32
+                        type: integer
+                      periodSeconds:
+                        description: How often (in seconds) to perform the probe.
+                          Default to 10 seconds. Minimum value is 1.
+                        format: int32
+                        type: integer
+                      successThreshold:
+                        description: Minimum consecutive successes for the probe to
+                          be considered successful after having failed. Defaults to
+                          1. Must be 1 for liveness and startup. Minimum value is
+                          1.
+                        format: int32
+                        type: integer
+                      tcpSocket:
+                        description: 'TCPSocket specifies an action involving a TCP
+                          port. TCP hooks not yet supported TODO: implement a realistic
+                          TCP lifecycle hook'
+                        properties:
+                          host:
+                            description: 'Optional: Host name to connect to, defaults
+                              to the pod IP.'
+                            type: string
+                          port:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            description: Number or name of the port to access on the
+                              container. Number must be in the range 1 to 65535. Name
+                              must be an IANA_SVC_NAME.
+                            x-kubernetes-int-or-string: true
+                        required:
+                        - port
+                        type: object
+                      terminationGracePeriodSeconds:
+                        description: Optional duration in seconds the pod needs to
+                          terminate gracefully upon probe failure. The grace period
+                          is the duration in seconds after the processes running in
+                          the pod are sent a termination signal and the time when
+                          the processes are forcibly halted with a kill signal. Set
+                          this value longer than the expected cleanup time for your
+                          process. If this value is nil, the pod's terminationGracePeriodSeconds
+                          will be used. Otherwise, this value overrides the value
+                          provided by the pod spec. Value must be non-negative integer.
+                          The value zero indicates stop immediately via the kill signal
+                          (no opportunity to shut down). This is a beta field and
+                          requires enabling ProbeTerminationGracePeriod feature gate.
+                          Minimum value is 1. spec.terminationGracePeriodSeconds is
+                          used if unset.
+                        format: int64
+                        type: integer
+                      timeoutSeconds:
+                        description: 'Number of seconds after which the probe times
+                          out. Defaults to 1 second. Minimum value is 1. More info:
+                          https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                        format: int32
+                        type: integer
+                    type: object
+                  storageSize:
+                    description: StorageSize pvc disk size
+                    type: string
+                required:
+                - image
+                - storageSize
+                type: object
               affinity:
                 description: If specified, the pod's scheduling constraints
                 properties:
@@ -869,647 +1157,29 @@ spec:
                   keep with corev1.PullPolicy
                 type: string
               masterReplicas:
-                description: Replicas redis副本数量
+                description: Replicas Kafka副本数量
                 type: integer
               password:
                 description: Password 密码
                 type: string
-              predixy:
-                description: Predixy use predixy as redis cluster proxy
-                properties:
-                  args:
-                    description: Command redis cluster proxy container command args
-                    items:
-                      type: string
-                    type: array
-                  command:
-                    description: Command redis cluster proxy container command
-                    items:
-                      type: string
-                    type: array
-                  image:
-                    description: Image redis cluster proxy image
-                    type: string
-                  livenessProbe:
-                    description: 'Periodic probe of container liveness. Container
-                      will be restarted if the probe fails. Cannot be updated. More
-                      info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
-                    properties:
-                      exec:
-                        description: One and only one of the following should be specified.
-                          Exec specifies the action to take.
-                        properties:
-                          command:
-                            description: Command is the command line to execute inside
-                              the container, the working directory for the command  is
-                              root ('/') in the container's filesystem. The command
-                              is simply exec'd, it is not run inside a shell, so traditional
-                              shell instructions ('|', etc) won't work. To use a shell,
-                              you need to explicitly call out to that shell. Exit
-                              status of 0 is treated as live/healthy and non-zero
-                              is unhealthy.
-                            items:
-                              type: string
-                            type: array
-                        type: object
-                      failureThreshold:
-                        description: Minimum consecutive failures for the probe to
-                          be considered failed after having succeeded. Defaults to
-                          3. Minimum value is 1.
-                        format: int32
-                        type: integer
-                      httpGet:
-                        description: HTTPGet specifies the http request to perform.
-                        properties:
-                          host:
-                            description: Host name to connect to, defaults to the
-                              pod IP. You probably want to set "Host" in httpHeaders
-                              instead.
-                            type: string
-                          httpHeaders:
-                            description: Custom headers to set in the request. HTTP
-                              allows repeated headers.
-                            items:
-                              description: HTTPHeader describes a custom header to
-                                be used in HTTP probes
-                              properties:
-                                name:
-                                  description: The header field name
-                                  type: string
-                                value:
-                                  description: The header field value
-                                  type: string
-                              required:
-                              - name
-                              - value
-                              type: object
-                            type: array
-                          path:
-                            description: Path to access on the HTTP server.
-                            type: string
-                          port:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            description: Name or number of the port to access on the
-                              container. Number must be in the range 1 to 65535. Name
-                              must be an IANA_SVC_NAME.
-                            x-kubernetes-int-or-string: true
-                          scheme:
-                            description: Scheme to use for connecting to the host.
-                              Defaults to HTTP.
-                            type: string
-                        required:
-                        - port
-                        type: object
-                      initialDelaySeconds:
-                        description: 'Number of seconds after the container has started
-                          before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
-                        format: int32
-                        type: integer
-                      periodSeconds:
-                        description: How often (in seconds) to perform the probe.
-                          Default to 10 seconds. Minimum value is 1.
-                        format: int32
-                        type: integer
-                      successThreshold:
-                        description: Minimum consecutive successes for the probe to
-                          be considered successful after having failed. Defaults to
-                          1. Must be 1 for liveness and startup. Minimum value is
-                          1.
-                        format: int32
-                        type: integer
-                      tcpSocket:
-                        description: 'TCPSocket specifies an action involving a TCP
-                          port. TCP hooks not yet supported TODO: implement a realistic
-                          TCP lifecycle hook'
-                        properties:
-                          host:
-                            description: 'Optional: Host name to connect to, defaults
-                              to the pod IP.'
-                            type: string
-                          port:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            description: Number or name of the port to access on the
-                              container. Number must be in the range 1 to 65535. Name
-                              must be an IANA_SVC_NAME.
-                            x-kubernetes-int-or-string: true
-                        required:
-                        - port
-                        type: object
-                      terminationGracePeriodSeconds:
-                        description: Optional duration in seconds the pod needs to
-                          terminate gracefully upon probe failure. The grace period
-                          is the duration in seconds after the processes running in
-                          the pod are sent a termination signal and the time when
-                          the processes are forcibly halted with a kill signal. Set
-                          this value longer than the expected cleanup time for your
-                          process. If this value is nil, the pod's terminationGracePeriodSeconds
-                          will be used. Otherwise, this value overrides the value
-                          provided by the pod spec. Value must be non-negative integer.
-                          The value zero indicates stop immediately via the kill signal
-                          (no opportunity to shut down). This is a beta field and
-                          requires enabling ProbeTerminationGracePeriod feature gate.
-                          Minimum value is 1. spec.terminationGracePeriodSeconds is
-                          used if unset.
-                        format: int64
-                        type: integer
-                      timeoutSeconds:
-                        description: 'Number of seconds after which the probe times
-                          out. Defaults to 1 second. Minimum value is 1. More info:
-                          https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
-                        format: int32
-                        type: integer
-                    type: object
-                  nodePort:
-                    description: NodePort nodePort of redis cluster proxy service
-                      if value is nil, no nodePort will be created if value is 0,
-                      nodePort number is allocted by kuberentes with random number
-                      if value is not nil and not equal 0, nodePort number is your
-                      specific number
-                    format: int32
-                    type: integer
-                  readinessProbe:
-                    description: 'Periodic probe of container service readiness. Container
-                      will be removed from service endpoints if the probe fails. Cannot
-                      be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
-                    properties:
-                      exec:
-                        description: One and only one of the following should be specified.
-                          Exec specifies the action to take.
-                        properties:
-                          command:
-                            description: Command is the command line to execute inside
-                              the container, the working directory for the command  is
-                              root ('/') in the container's filesystem. The command
-                              is simply exec'd, it is not run inside a shell, so traditional
-                              shell instructions ('|', etc) won't work. To use a shell,
-                              you need to explicitly call out to that shell. Exit
-                              status of 0 is treated as live/healthy and non-zero
-                              is unhealthy.
-                            items:
-                              type: string
-                            type: array
-                        type: object
-                      failureThreshold:
-                        description: Minimum consecutive failures for the probe to
-                          be considered failed after having succeeded. Defaults to
-                          3. Minimum value is 1.
-                        format: int32
-                        type: integer
-                      httpGet:
-                        description: HTTPGet specifies the http request to perform.
-                        properties:
-                          host:
-                            description: Host name to connect to, defaults to the
-                              pod IP. You probably want to set "Host" in httpHeaders
-                              instead.
-                            type: string
-                          httpHeaders:
-                            description: Custom headers to set in the request. HTTP
-                              allows repeated headers.
-                            items:
-                              description: HTTPHeader describes a custom header to
-                                be used in HTTP probes
-                              properties:
-                                name:
-                                  description: The header field name
-                                  type: string
-                                value:
-                                  description: The header field value
-                                  type: string
-                              required:
-                              - name
-                              - value
-                              type: object
-                            type: array
-                          path:
-                            description: Path to access on the HTTP server.
-                            type: string
-                          port:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            description: Name or number of the port to access on the
-                              container. Number must be in the range 1 to 65535. Name
-                              must be an IANA_SVC_NAME.
-                            x-kubernetes-int-or-string: true
-                          scheme:
-                            description: Scheme to use for connecting to the host.
-                              Defaults to HTTP.
-                            type: string
-                        required:
-                        - port
-                        type: object
-                      initialDelaySeconds:
-                        description: 'Number of seconds after the container has started
-                          before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
-                        format: int32
-                        type: integer
-                      periodSeconds:
-                        description: How often (in seconds) to perform the probe.
-                          Default to 10 seconds. Minimum value is 1.
-                        format: int32
-                        type: integer
-                      successThreshold:
-                        description: Minimum consecutive successes for the probe to
-                          be considered successful after having failed. Defaults to
-                          1. Must be 1 for liveness and startup. Minimum value is
-                          1.
-                        format: int32
-                        type: integer
-                      tcpSocket:
-                        description: 'TCPSocket specifies an action involving a TCP
-                          port. TCP hooks not yet supported TODO: implement a realistic
-                          TCP lifecycle hook'
-                        properties:
-                          host:
-                            description: 'Optional: Host name to connect to, defaults
-                              to the pod IP.'
-                            type: string
-                          port:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            description: Number or name of the port to access on the
-                              container. Number must be in the range 1 to 65535. Name
-                              must be an IANA_SVC_NAME.
-                            x-kubernetes-int-or-string: true
-                        required:
-                        - port
-                        type: object
-                      terminationGracePeriodSeconds:
-                        description: Optional duration in seconds the pod needs to
-                          terminate gracefully upon probe failure. The grace period
-                          is the duration in seconds after the processes running in
-                          the pod are sent a termination signal and the time when
-                          the processes are forcibly halted with a kill signal. Set
-                          this value longer than the expected cleanup time for your
-                          process. If this value is nil, the pod's terminationGracePeriodSeconds
-                          will be used. Otherwise, this value overrides the value
-                          provided by the pod spec. Value must be non-negative integer.
-                          The value zero indicates stop immediately via the kill signal
-                          (no opportunity to shut down). This is a beta field and
-                          requires enabling ProbeTerminationGracePeriod feature gate.
-                          Minimum value is 1. spec.terminationGracePeriodSeconds is
-                          used if unset.
-                        format: int64
-                        type: integer
-                      timeoutSeconds:
-                        description: 'Number of seconds after which the probe times
-                          out. Defaults to 1 second. Minimum value is 1. More info:
-                          https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
-                        format: int32
-                        type: integer
-                    type: object
-                  replicas:
-                    description: Replicas redis cluster proxy pod relicas
-                    format: int32
-                    type: integer
-                  resources:
-                    description: 'Compute Resources required by this container. Cannot
-                      be updated. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
-                    properties:
-                      limits:
-                        additionalProperties:
-                          anyOf:
-                          - type: integer
-                          - type: string
-                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                          x-kubernetes-int-or-string: true
-                        description: 'Limits describes the maximum amount of compute
-                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
-                        type: object
-                      requests:
-                        additionalProperties:
-                          anyOf:
-                          - type: integer
-                          - type: string
-                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                          x-kubernetes-int-or-string: true
-                        description: 'Requests describes the minimum amount of compute
-                          resources required. If Requests is omitted for a container,
-                          it defaults to Limits if that is explicitly specified, otherwise
-                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
-                        type: object
-                    type: object
-                required:
-                - image
-                type: object
               priorityClassName:
-                description: PriorityClassName redis and redis-cluster-proxy pods
+                description: PriorityClassName Kafka and Kafka-cluster-proxy pods
                   pod priority class name
                 type: string
-              redis:
+              proxy:
                 properties:
                   args:
-                    description: Command redis container command args
-                    items:
-                      type: string
-                    type: array
-                  backupMethod:
-                    description: BackupMethod data backup method, valid value is [
-                      AOF RDB ]
-                    type: string
-                  command:
-                    description: Command redis container command
-                    items:
-                      type: string
-                    type: array
-                  image:
-                    description: Image redis server image
-                    type: string
-                  livenessProbe:
-                    description: 'Periodic probe of container liveness. Container
-                      will be restarted if the probe fails. Cannot be updated. More
-                      info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
-                    properties:
-                      exec:
-                        description: One and only one of the following should be specified.
-                          Exec specifies the action to take.
-                        properties:
-                          command:
-                            description: Command is the command line to execute inside
-                              the container, the working directory for the command  is
-                              root ('/') in the container's filesystem. The command
-                              is simply exec'd, it is not run inside a shell, so traditional
-                              shell instructions ('|', etc) won't work. To use a shell,
-                              you need to explicitly call out to that shell. Exit
-                              status of 0 is treated as live/healthy and non-zero
-                              is unhealthy.
-                            items:
-                              type: string
-                            type: array
-                        type: object
-                      failureThreshold:
-                        description: Minimum consecutive failures for the probe to
-                          be considered failed after having succeeded. Defaults to
-                          3. Minimum value is 1.
-                        format: int32
-                        type: integer
-                      httpGet:
-                        description: HTTPGet specifies the http request to perform.
-                        properties:
-                          host:
-                            description: Host name to connect to, defaults to the
-                              pod IP. You probably want to set "Host" in httpHeaders
-                              instead.
-                            type: string
-                          httpHeaders:
-                            description: Custom headers to set in the request. HTTP
-                              allows repeated headers.
-                            items:
-                              description: HTTPHeader describes a custom header to
-                                be used in HTTP probes
-                              properties:
-                                name:
-                                  description: The header field name
-                                  type: string
-                                value:
-                                  description: The header field value
-                                  type: string
-                              required:
-                              - name
-                              - value
-                              type: object
-                            type: array
-                          path:
-                            description: Path to access on the HTTP server.
-                            type: string
-                          port:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            description: Name or number of the port to access on the
-                              container. Number must be in the range 1 to 65535. Name
-                              must be an IANA_SVC_NAME.
-                            x-kubernetes-int-or-string: true
-                          scheme:
-                            description: Scheme to use for connecting to the host.
-                              Defaults to HTTP.
-                            type: string
-                        required:
-                        - port
-                        type: object
-                      initialDelaySeconds:
-                        description: 'Number of seconds after the container has started
-                          before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
-                        format: int32
-                        type: integer
-                      periodSeconds:
-                        description: How often (in seconds) to perform the probe.
-                          Default to 10 seconds. Minimum value is 1.
-                        format: int32
-                        type: integer
-                      successThreshold:
-                        description: Minimum consecutive successes for the probe to
-                          be considered successful after having failed. Defaults to
-                          1. Must be 1 for liveness and startup. Minimum value is
-                          1.
-                        format: int32
-                        type: integer
-                      tcpSocket:
-                        description: 'TCPSocket specifies an action involving a TCP
-                          port. TCP hooks not yet supported TODO: implement a realistic
-                          TCP lifecycle hook'
-                        properties:
-                          host:
-                            description: 'Optional: Host name to connect to, defaults
-                              to the pod IP.'
-                            type: string
-                          port:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            description: Number or name of the port to access on the
-                              container. Number must be in the range 1 to 65535. Name
-                              must be an IANA_SVC_NAME.
-                            x-kubernetes-int-or-string: true
-                        required:
-                        - port
-                        type: object
-                      terminationGracePeriodSeconds:
-                        description: Optional duration in seconds the pod needs to
-                          terminate gracefully upon probe failure. The grace period
-                          is the duration in seconds after the processes running in
-                          the pod are sent a termination signal and the time when
-                          the processes are forcibly halted with a kill signal. Set
-                          this value longer than the expected cleanup time for your
-                          process. If this value is nil, the pod's terminationGracePeriodSeconds
-                          will be used. Otherwise, this value overrides the value
-                          provided by the pod spec. Value must be non-negative integer.
-                          The value zero indicates stop immediately via the kill signal
-                          (no opportunity to shut down). This is a beta field and
-                          requires enabling ProbeTerminationGracePeriod feature gate.
-                          Minimum value is 1. spec.terminationGracePeriodSeconds is
-                          used if unset.
-                        format: int64
-                        type: integer
-                      timeoutSeconds:
-                        description: 'Number of seconds after which the probe times
-                          out. Defaults to 1 second. Minimum value is 1. More info:
-                          https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
-                        format: int32
-                        type: integer
-                    type: object
-                  readinessProbe:
-                    description: 'Periodic probe of container service readiness. Container
-                      will be removed from service endpoints if the probe fails. Cannot
-                      be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
-                    properties:
-                      exec:
-                        description: One and only one of the following should be specified.
-                          Exec specifies the action to take.
-                        properties:
-                          command:
-                            description: Command is the command line to execute inside
-                              the container, the working directory for the command  is
-                              root ('/') in the container's filesystem. The command
-                              is simply exec'd, it is not run inside a shell, so traditional
-                              shell instructions ('|', etc) won't work. To use a shell,
-                              you need to explicitly call out to that shell. Exit
-                              status of 0 is treated as live/healthy and non-zero
-                              is unhealthy.
-                            items:
-                              type: string
-                            type: array
-                        type: object
-                      failureThreshold:
-                        description: Minimum consecutive failures for the probe to
-                          be considered failed after having succeeded. Defaults to
-                          3. Minimum value is 1.
-                        format: int32
-                        type: integer
-                      httpGet:
-                        description: HTTPGet specifies the http request to perform.
-                        properties:
-                          host:
-                            description: Host name to connect to, defaults to the
-                              pod IP. You probably want to set "Host" in httpHeaders
-                              instead.
-                            type: string
-                          httpHeaders:
-                            description: Custom headers to set in the request. HTTP
-                              allows repeated headers.
-                            items:
-                              description: HTTPHeader describes a custom header to
-                                be used in HTTP probes
-                              properties:
-                                name:
-                                  description: The header field name
-                                  type: string
-                                value:
-                                  description: The header field value
-                                  type: string
-                              required:
-                              - name
-                              - value
-                              type: object
-                            type: array
-                          path:
-                            description: Path to access on the HTTP server.
-                            type: string
-                          port:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            description: Name or number of the port to access on the
-                              container. Number must be in the range 1 to 65535. Name
-                              must be an IANA_SVC_NAME.
-                            x-kubernetes-int-or-string: true
-                          scheme:
-                            description: Scheme to use for connecting to the host.
-                              Defaults to HTTP.
-                            type: string
-                        required:
-                        - port
-                        type: object
-                      initialDelaySeconds:
-                        description: 'Number of seconds after the container has started
-                          before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
-                        format: int32
-                        type: integer
-                      periodSeconds:
-                        description: How often (in seconds) to perform the probe.
-                          Default to 10 seconds. Minimum value is 1.
-                        format: int32
-                        type: integer
-                      successThreshold:
-                        description: Minimum consecutive successes for the probe to
-                          be considered successful after having failed. Defaults to
-                          1. Must be 1 for liveness and startup. Minimum value is
-                          1.
-                        format: int32
-                        type: integer
-                      tcpSocket:
-                        description: 'TCPSocket specifies an action involving a TCP
-                          port. TCP hooks not yet supported TODO: implement a realistic
-                          TCP lifecycle hook'
-                        properties:
-                          host:
-                            description: 'Optional: Host name to connect to, defaults
-                              to the pod IP.'
-                            type: string
-                          port:
-                            anyOf:
-                            - type: integer
-                            - type: string
-                            description: Number or name of the port to access on the
-                              container. Number must be in the range 1 to 65535. Name
-                              must be an IANA_SVC_NAME.
-                            x-kubernetes-int-or-string: true
-                        required:
-                        - port
-                        type: object
-                      terminationGracePeriodSeconds:
-                        description: Optional duration in seconds the pod needs to
-                          terminate gracefully upon probe failure. The grace period
-                          is the duration in seconds after the processes running in
-                          the pod are sent a termination signal and the time when
-                          the processes are forcibly halted with a kill signal. Set
-                          this value longer than the expected cleanup time for your
-                          process. If this value is nil, the pod's terminationGracePeriodSeconds
-                          will be used. Otherwise, this value overrides the value
-                          provided by the pod spec. Value must be non-negative integer.
-                          The value zero indicates stop immediately via the kill signal
-                          (no opportunity to shut down). This is a beta field and
-                          requires enabling ProbeTerminationGracePeriod feature gate.
-                          Minimum value is 1. spec.terminationGracePeriodSeconds is
-                          used if unset.
-                        format: int64
-                        type: integer
-                      timeoutSeconds:
-                        description: 'Number of seconds after which the probe times
-                          out. Defaults to 1 second. Minimum value is 1. More info:
-                          https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
-                        format: int32
-                        type: integer
-                    type: object
-                  storageSize:
-                    description: StorageSize pvc disk size
-                    type: string
-                required:
-                - image
-                - storageSize
-                type: object
-              redisClusterProxy:
-                description: RedisClusterProxy use redislabs redis cluster proxy as
-                  cluster proxy
-                properties:
-                  args:
-                    description: Command redis cluster proxy container command args
+                    description: Command Kafka cluster proxy container command args
                     items:
                       type: string
                     type: array
                   command:
-                    description: Command redis cluster proxy container command
+                    description: Command Kafka cluster proxy container command
                     items:
                       type: string
                     type: array
                   image:
-                    description: Image redis cluster proxy image
+                    description: Image Kafka cluster proxy image
                     type: string
                   livenessProbe:
                     description: 'Periodic probe of container liveness. Container
@@ -1645,7 +1315,7 @@ spec:
                         type: integer
                     type: object
                   nodePort:
-                    description: NodePort nodePort of redis cluster proxy service
+                    description: NodePort nodePort of Kafka cluster proxy service
                       if value is nil, no nodePort will be created if value is 0,
                       nodePort number is allocted by kuberentes with random number
                       if value is not nil and not equal 0, nodePort number is your
@@ -1786,7 +1456,7 @@ spec:
                         type: integer
                     type: object
                   replicas:
-                    description: Replicas redis cluster proxy pod relicas
+                    description: Replicas Kafka cluster proxy pod relicas
                     format: int32
                     type: integer
                   resources:
@@ -1897,17 +1567,18 @@ spec:
                   type: object
                 type: array
             required:
+            - Kafka
             - dataReplicas
             - masterReplicas
-            - redis
+            - proxy
             - storageClassName
             - timeZone
             type: object
           status:
-            description: RedisStatus bootstrap process status
+            description: KafkaStatus bootstrap process status
             properties:
               masters:
-                description: Masters current redis cluster masters
+                description: Masters current Kafka cluster masters
                 items:
                   type: string
                 type: array

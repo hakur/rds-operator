@@ -1,9 +1,6 @@
 package redis
 
 import (
-	"strconv"
-	"strings"
-
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
 	"github.com/hakur/rds-operator/pkg/reconciler"
 	"github.com/jinzhu/copier"
@@ -44,6 +41,9 @@ func buildRedisSts(cr *rdsv1alpha1.Redis) (sts *appsv1.StatefulSet, err error) {
 	podTemplateSpec.Spec.Affinity = cr.Spec.Affinity
 	podTemplateSpec.Spec.Tolerations = cr.Spec.Tolerations
 	podTemplateSpec.Spec.PriorityClassName = cr.Spec.PriorityClassName
+	podTemplateSpec.Spec.Volumes = []corev1.Volume{
+		{Name: "localtime", VolumeSource: corev1.VolumeSource{HostPath: &corev1.HostPathVolumeSource{Path: "/etc/localtime"}}},
+	}
 
 	quantity, err := resource.ParseQuantity(cr.Spec.Redis.StorageSize)
 	if err != nil {
@@ -107,43 +107,24 @@ func caculateReplicas(cr *rdsv1alpha1.Redis) (replicas int) {
 
 // buildRedisContainer generate redis container spec
 func buildRedisContainer(cr *rdsv1alpha1.Redis) (container corev1.Container) {
-	var nodes []string
-	var redisPassword string
-	var allowEmptyPassword = "false"
-	svc := buildRedisSvc(cr)
-
-	if cr.Spec.Password != nil {
-		redisPassword = *cr.Spec.Password
-	}
-
-	if cr.Spec.Password == nil {
-		allowEmptyPassword = "true"
-	}
-
-	for i := 0; i < caculateReplicas(cr); i++ {
-		nodes = append(nodes, cr.Name+"-redis-"+strconv.Itoa(i)+"."+svc.Name)
-	}
+	secret := buildSecret(cr)
 
 	container.Image = cr.Spec.Redis.Image
 	container.ImagePullPolicy = cr.Spec.ImagePullPolicy
 	container.Name = "redis"
-	container.Env = []corev1.EnvVar{
-		{Name: "REDIS_PASSWORD", Value: redisPassword},
-		{Name: "REDISCLI_AUTH", Value: redisPassword},
-		{Name: "REDIS_NODES", Value: strings.Join(nodes, " ")},
-		{Name: "ALLOW_EMPTY_PASSWORD", Value: allowEmptyPassword},
-		{Name: "REDIS_CLUSTER_REPLICAS", Value: strconv.Itoa(cr.Spec.DataReplicas)},
-		{Name: "TZ", Value: cr.Spec.TimeZone},
-	}
-
-	if cr.Spec.Redis.BackupMethod == "AOF" {
-		container.Env = append(container.Env, corev1.EnvVar{Name: "REDIS_AOF_ENABLED", Value: "yes"})
-	} else {
-		container.Env = append(container.Env, corev1.EnvVar{Name: "REDIS_AOF_ENABLED", Value: "no"})
+	container.EnvFrom = []corev1.EnvFromSource{
+		{
+			SecretRef: &corev1.SecretEnvSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: secret.Name,
+				},
+			},
+		},
 	}
 
 	container.VolumeMounts = []corev1.VolumeMount{
 		{Name: "data", MountPath: "/bitnami"},
+		{Name: "localtime", MountPath: "/etc/localtime"},
 	}
 
 	container.Command = cr.Spec.Redis.Command

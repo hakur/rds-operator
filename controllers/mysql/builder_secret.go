@@ -29,7 +29,7 @@ func buildSecret(cr *rdsv1alpha1.Mysql) (secret *corev1.Secret) {
 	secret = new(corev1.Secret)
 	secret.APIVersion = "v1"
 	secret.Kind = "ConfigMap"
-	secret.Name = cr.Name + "-secret"
+	secret.Name = cr.Name + "-mysql-secret"
 	secret.Namespace = cr.Namespace
 	secret.Labels = buildMysqlLabels(cr)
 

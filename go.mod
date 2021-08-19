@@ -10,8 +10,8 @@ require (
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gorm.io/driver/mysql v1.1.1
 	gorm.io/gorm v1.21.12
-	k8s.io/api v0.21.3
-	k8s.io/apimachinery v0.21.3
-	k8s.io/client-go v0.21.3
+	k8s.io/api v0.22.1
+	k8s.io/apimachinery v0.22.1
+	k8s.io/client-go v0.22.1
 	sigs.k8s.io/controller-runtime v0.9.6
 )

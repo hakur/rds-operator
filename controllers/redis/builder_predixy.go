@@ -8,16 +8,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// buildProxySvc gernate redis cluster proxy kind:Service
-func buildProxySvc(cr *rdsv1alpha1.Redis) (svc *corev1.Service) {
+// buildPredixySvc gernate redis cluster Predixy kind:Service
+func buildPredixySvc(cr *rdsv1alpha1.Redis) (svc *corev1.Service) {
 	var spec corev1.ServiceSpec
 	var redisPort = corev1.ServicePort{Name: "redis", Port: 6379}
 	svc = new(corev1.Service)
 
 	svc.ObjectMeta = metav1.ObjectMeta{
-		Name:      cr.Name + "-proxy",
+		Name:      cr.Name + "-predixy",
 		Namespace: cr.Namespace,
-		Labels:    buildProxyLabels(cr),
+		Labels:    buildPredixyLabels(cr),
 	}
 
 	svc.TypeMeta = metav1.TypeMeta{
@@ -25,12 +25,12 @@ func buildProxySvc(cr *rdsv1alpha1.Redis) (svc *corev1.Service) {
 		APIVersion: "v1",
 	}
 
-	spec.Selector = buildProxyLabels(cr)
+	spec.Selector = buildPredixyLabels(cr)
 
-	if cr.Spec.RedisClusterProxy.NodePort != nil {
+	if cr.Spec.Predixy.NodePort != nil {
 		spec.Type = corev1.ServiceTypeNodePort
-		if *cr.Spec.RedisClusterProxy.NodePort > 0 {
-			redisPort.NodePort = *cr.Spec.RedisClusterProxy.NodePort
+		if *cr.Spec.Predixy.NodePort > 0 {
+			redisPort.NodePort = *cr.Spec.Predixy.NodePort
 		}
 	}
 
@@ -40,10 +40,10 @@ func buildProxySvc(cr *rdsv1alpha1.Redis) (svc *corev1.Service) {
 	return svc
 }
 
-// buildProxyLabels generate labels from cr resource, used for pod list filter
-func buildProxyLabels(cr *rdsv1alpha1.Redis) (labels map[string]string) {
+// buildPredixyLabels generate labels from cr resource, used for pod list filter
+func buildPredixyLabels(cr *rdsv1alpha1.Redis) (labels map[string]string) {
 	labels = map[string]string{
-		"app":       "redis-cluster-proxy",
+		"app":       "redis-cluster-predixy",
 		"cr-name":   cr.Name,
 		"api-group": rdsv1alpha1.GroupVersion.Group,
 	}
@@ -51,13 +51,12 @@ func buildProxyLabels(cr *rdsv1alpha1.Redis) (labels map[string]string) {
 	return labels
 }
 
-// buildProxyContainer generate redis cluster proxy container
-func buildProxyContainer(cr *rdsv1alpha1.Redis) (container corev1.Container) {
+// buildPredixyContainer generate Predixy container
+func buildPredixyContainer(cr *rdsv1alpha1.Redis) (container corev1.Container) {
 	secret := buildSecret(cr)
-
-	container.Image = cr.Spec.RedisClusterProxy.Image
+	container.Image = cr.Spec.Predixy.Image
 	container.ImagePullPolicy = cr.Spec.ImagePullPolicy
-	container.Name = "proxy"
+	container.Name = "predixy"
 	container.EnvFrom = []corev1.EnvFromSource{
 		{
 			SecretRef: &corev1.SecretEnvSource{
@@ -68,11 +67,11 @@ func buildProxyContainer(cr *rdsv1alpha1.Redis) (container corev1.Container) {
 		},
 	}
 
-	container.Command = cr.Spec.RedisClusterProxy.Command
-	container.Args = cr.Spec.RedisClusterProxy.Args
+	container.Command = cr.Spec.Predixy.Command
+	container.Args = cr.Spec.Predixy.Args
 	container.Resources = cr.Spec.Resources
-	container.LivenessProbe = cr.Spec.RedisClusterProxy.LivenessProbe
-	container.ReadinessProbe = cr.Spec.RedisClusterProxy.ReadinessProbe
+	container.LivenessProbe = cr.Spec.Predixy.LivenessProbe
+	container.ReadinessProbe = cr.Spec.Predixy.ReadinessProbe
 	container.VolumeMounts = []corev1.VolumeMount{
 		{Name: "localtime", MountPath: "/etc/localtime"},
 	}
@@ -80,16 +79,16 @@ func buildProxyContainer(cr *rdsv1alpha1.Redis) (container corev1.Container) {
 	return container
 }
 
-// buildProxyDeploy generate deployment of redis cluster proxy
-func buildProxyDeploy(cr *rdsv1alpha1.Redis) (deploy *appsv1.Deployment, err error) {
+// buildPredixyDeploy generate deployment of Predixy
+func buildPredixyDeploy(cr *rdsv1alpha1.Redis) (deploy *appsv1.Deployment, err error) {
 	var spec appsv1.DeploymentSpec
 	var podTemplateSpec corev1.PodTemplateSpec
 	deploy = new(appsv1.Deployment)
 
 	deploy.ObjectMeta = metav1.ObjectMeta{
-		Name:      cr.Name + "-proxy",
+		Name:      cr.Name + "-predixy",
 		Namespace: cr.Namespace,
-		Labels:    buildProxyLabels(cr),
+		Labels:    buildPredixyLabels(cr),
 	}
 
 	deploy.TypeMeta = metav1.TypeMeta{
@@ -97,11 +96,11 @@ func buildProxyDeploy(cr *rdsv1alpha1.Redis) (deploy *appsv1.Deployment, err err
 		APIVersion: "apps/v1",
 	}
 
-	spec.Replicas = cr.Spec.RedisClusterProxy.Replicas
-	spec.Selector = &metav1.LabelSelector{MatchLabels: buildProxyLabels(cr)}
+	spec.Replicas = cr.Spec.Predixy.Replicas
+	spec.Selector = &metav1.LabelSelector{MatchLabels: buildPredixyLabels(cr)}
 
-	podTemplateSpec.ObjectMeta = metav1.ObjectMeta{Labels: buildProxyLabels(cr)}
-	podTemplateSpec.Spec.Containers = []corev1.Container{buildProxyContainer(cr)}
+	podTemplateSpec.ObjectMeta = metav1.ObjectMeta{Labels: buildPredixyLabels(cr)}
+	podTemplateSpec.Spec.Containers = []corev1.Container{buildPredixyContainer(cr)}
 	podTemplateSpec.Spec.ServiceAccountName = cr.Spec.ServiceAccountName
 	podTemplateSpec.Spec.Affinity = cr.Spec.Affinity
 	podTemplateSpec.Spec.Tolerations = cr.Spec.Tolerations

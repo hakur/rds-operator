@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const RedisFinlizer = "redis.rds.hakurei.cn"
+const RedisFinlizer = "redis.rds.hakurei.cn/v1alpha1"
 
 //+kubebuilder:rbac:groups=rds.hakurei.cn,resources=redis,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=rds.hakurei.cn,resources=redis/status,verbs=get;update;patch
@@ -89,21 +89,11 @@ func (t *RedisReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Redis) (err
 		return err
 	}
 
-	deployment, err := buildProxyDeploy(cr)
-	if err != nil {
-		return err
-	}
-
 	redisService := buildRedisSvc(cr)
-	proxyService := buildProxySvc(cr)
+	secret := buildSecret(cr)
 
 	// redis servers
 	if err = reconciler.ApplyStatefulSet(t.Client, ctx, statefulset, cr, t.Scheme); err != nil {
-		return err
-	}
-
-	// redis cluster proxy
-	if err = reconciler.ApplyDeployment(t.Client, ctx, deployment, cr, t.Scheme); err != nil {
 		return err
 	}
 
@@ -111,8 +101,40 @@ func (t *RedisReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Redis) (err
 		return err
 	}
 
-	if err = reconciler.ApplyService(t.Client, ctx, proxyService, cr, t.Scheme); err != nil {
+	if err = reconciler.ApplySecret(t.Client, ctx, secret, cr, t.Scheme); err != nil {
 		return err
+	}
+
+	if cr.Spec.RedisClusterProxy != nil {
+		redisClusterPorxydeployment, err := buildProxyDeploy(cr)
+		if err != nil {
+			return err
+		}
+
+		if err = reconciler.ApplyDeployment(t.Client, ctx, redisClusterPorxydeployment, cr, t.Scheme); err != nil {
+			return err
+		}
+
+		redisClusterProxyService := buildProxySvc(cr)
+		if err = reconciler.ApplyService(t.Client, ctx, redisClusterProxyService, cr, t.Scheme); err != nil {
+			return err
+		}
+	}
+
+	if cr.Spec.Predixy != nil {
+		predixydeployment, err := buildPredixyDeploy(cr)
+		if err != nil {
+			return err
+		}
+
+		if err = reconciler.ApplyDeployment(t.Client, ctx, predixydeployment, cr, t.Scheme); err != nil {
+			return err
+		}
+
+		predixyService := buildPredixySvc(cr)
+		if err = reconciler.ApplyService(t.Client, ctx, predixyService, cr, t.Scheme); err != nil {
+			return err
+		}
 	}
 
 	if err = reconciler.RemovePVCRetentionMark(t.Client, ctx, cr.Namespace, reconciler.BuildCRPVCLabels(cr, cr)); err != nil {
@@ -170,9 +192,45 @@ func (t *RedisReconciler) clean(ctx context.Context, cr *rdsv1alpha1.Redis) (err
 		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
 	}
 
+	// clean predixy sub resources
+	var predixyDeployments appsv1.DeploymentList
+	if err = t.List(ctx, &predixyDeployments, client.InNamespace(cr.Namespace), client.MatchingLabels(buildPredixyLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+		for _, v := range predixyDeployments.Items {
+			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
+			}
+		}
+	} else {
+		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
+	}
+
+	var predixyServices corev1.ServiceList
+	if err = t.List(ctx, &predixyServices, client.InNamespace(cr.Namespace), client.MatchingLabels(buildPredixyLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+		for _, v := range predixyServices.Items {
+			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
+			}
+		}
+	} else {
+		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
+	}
+
+	// remove cr all pods secret resources
+	var secrets corev1.SecretList
+	if err = t.List(ctx, &secrets, client.InNamespace(cr.Namespace), client.MatchingLabels(buildRedisLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+		for _, v := range secrets.Items {
+			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
+			}
+		}
+	} else {
+		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
+	}
+
 	// add pvc life deadline annotaion mark
 	if err = reconciler.AddPVCRetentionMark(t.Client, ctx, cr.Namespace, reconciler.BuildCRPVCLabels(cr, cr)); err != nil {
 		return err
 	}
+
 	return nil
 }

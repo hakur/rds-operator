@@ -29,6 +29,14 @@ SOFTWARE.
 
 package v1alpha1
 
+// KafkaListerExpansion allows custom methods to be added to
+// KafkaLister.
+type KafkaListerExpansion interface{}
+
+// KafkaNamespaceListerExpansion allows custom methods to be added to
+// KafkaNamespaceLister.
+type KafkaNamespaceListerExpansion interface{}
+
 // MysqlListerExpansion allows custom methods to be added to
 // MysqlLister.
 type MysqlListerExpansion interface{}

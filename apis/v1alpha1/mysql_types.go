@@ -127,6 +127,48 @@ type ProxySQLOptions struct {
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty" protobuf:"bytes,11,opt,name=readinessProbe"`
 }
 
+// MysqlRouterOptions proxysql 参数
+type MysqlRouterOptions struct {
+	// Image oci image full url ,for exmaple 'docker.io/library/nginx:1.18'
+	Image string `json:"image"`
+	// MysqlVersion specific version text will return to mysql client that connected on proxysql
+	MysqlVersion string `json:"mysqlVersion"`
+	// MonitorUser mysql server side user for proxysql monitor module connect
+	MonitorUser string `json:"monitorUser"`
+	// MonitorPassword password of MonitorUser
+	MonitorPassword string `json:"monitorPassword"`
+	// AdminUser proxysql side user for management proxysql
+	AdminUser string `json:"adminUser"`
+	// AdminPassword admin password for AdminUser
+	AdminPassword string `json:"adminPassword"`
+	// NodePort  nodeport of proxysql service
+	// if this value is nil, means no nodePort should be open
+	// if this value is zero,means open random nodePort
+	// if this value is zero,means open a specific nodePort
+	NodePort *int32 `json:"nodePort"`
+	// Replicas mysql cluster pod total count,contains master and slave
+	Replicas *int32 `json:"replicas,omitempty"`
+	// StorageSize pvc disk size
+	StorageSize string `json:"storageSize"`
+	// Compute Resources required by this container.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+	// +optional
+	Resources corev1.ResourceRequirements `json:"resources,omitempty" protobuf:"bytes,8,opt,name=resources"`
+	// Periodic probe of container liveness.
+	// Container will be restarted if the probe fails.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+	// +optional
+	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty" protobuf:"bytes,10,opt,name=livenessProbe"`
+	// Periodic probe of container service readiness.
+	// Container will be removed from service endpoints if the probe fails.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+	// +optional
+	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty" protobuf:"bytes,11,opt,name=readinessProbe"`
+}
+
 // MysqlSpec defines the desired state of Mysql
 type MysqlSpec struct {
 	// BackupPolicy mysql data backup methos , values are [ BackupDataDir ]
@@ -150,8 +192,10 @@ type MysqlSpec struct {
 	StorageClassName string `json:"storageClassName"`
 	// Mysql mysql cluset options
 	Mysql MysqlOptions `json:"mysql"`
-	// ProxySQL proxysql options
-	ProxySQL ProxySQLOptions `json:"proxysql"`
+	// ProxySQL proxysql options, use proxysql as mysql cluster proxy
+	ProxySQL *ProxySQLOptions `json:"proxysql"`
+	// MysqlRouter mysql router options, use mysql router as mysql cluster proxy
+	MysqlRouter *MysqlRouterOptions `json:"mysqlRouter"`
 	// TimeZone timezone string , for example Asia/Shanghai
 	TimeZone string `json:"timeZone"`
 	// PriorityClassName pod priority class name for all pods under CR resource

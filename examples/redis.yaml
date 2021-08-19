@@ -56,10 +56,16 @@ spec:
     #   initialDelaySeconds: 55
     #   periodSeconds: 5
     #   timeoutSeconds: 4
-  proxy:
-    image: rumia/redis-cluster-proxy:1.0-beta2
+  predixy: # recommend use predixy as redis cluster proxy, it currently support password auth, auto denny client read/write if password wrong
+    image: rumia/predixy:1.0.5
     replicas: 1
     nodePort: 32337 #set to zero if want use random nodeport,delete this field will disable nodeport
+
+  # redisClusterProxy: no client force auth options, current not use in production
+  #   image: rumia/redis-cluster-proxy:1.0-beta2
+  #   replicas: 1
+  #   nodePort: 32337 #set to zero if want use random nodeport,delete this field will disable nodeport
+
     # readinessProbe:
     #   exec:
     #     command:

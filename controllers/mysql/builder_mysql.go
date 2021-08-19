@@ -41,6 +41,7 @@ func buildMysqlVolumeMounts() (data []corev1.VolumeMount) {
 	data = append(data, corev1.VolumeMount{Name: "my-cnf", MountPath: "/etc/my.cnf", SubPath: "my.cnf"})
 	data = append(data, corev1.VolumeMount{MountPath: "/etc/my.cnf.d", Name: "my-cnfd"})
 	data = append(data, corev1.VolumeMount{MountPath: "/var/lib/mysql", Name: "data"})
+	data = append(data, corev1.VolumeMount{MountPath: "/etc/localtime", Name: "localtime"})
 	return
 }
 
@@ -76,6 +77,15 @@ func buildMysqlVolumes(cr *rdsv1alpha1.Mysql) (data []corev1.Volume) {
 		},
 	})
 
+	data = append(data, corev1.Volume{
+		Name: "localtime",
+		VolumeSource: corev1.VolumeSource{
+			HostPath: &corev1.HostPathVolumeSource{
+				Path: "/etc/localtime",
+			},
+		},
+	})
+
 	return
 }
 
@@ -91,12 +101,14 @@ func buildMysqlEnvs(cr *rdsv1alpha1.Mysql) (data []corev1.EnvVar) {
 
 // buildMysqlContainer generate mysql container spec
 func buildMysqlContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container) {
+	secret := buildSecret(cr)
+
 	container.Image = cr.Spec.Mysql.Image
 	container.ImagePullPolicy = cr.Spec.ImagePullPolicy
 	container.Name = "mysql"
 	container.Env = buildMysqlEnvs(cr)
 	container.VolumeMounts = buildMysqlVolumeMounts()
-	container.EnvFrom = []corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: cr.Name + "-secret"}}}}
+	container.EnvFrom = []corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: secret.Name}}}}
 	container.Resources = cr.Spec.Mysql.Resources
 	container.LivenessProbe = cr.Spec.Mysql.LivenessProbe
 	container.ReadinessProbe = cr.Spec.Mysql.ReadinessProbe
@@ -105,11 +117,13 @@ func buildMysqlContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container) {
 
 // buildMysqlBootContainer generate mysql container spec
 func buildMysqlBootContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container) {
+	secret := buildSecret(cr)
+
 	container.Image = cr.Spec.ConfigImage
 	container.ImagePullPolicy = cr.Spec.ImagePullPolicy
 	container.Name = "boot"
 	container.Env = buildMysqlEnvs(cr)
-	container.EnvFrom = []corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: cr.Name + "-secret"}}}}
+	container.EnvFrom = []corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: secret.Name}}}}
 	container.VolumeMounts = buildMysqlVolumeMounts()
 	container.Resources = cr.Spec.Mysql.Resources
 	container.Env = append(container.Env, corev1.EnvVar{Name: "BOOTSTRAP_CLUSTER", Value: "true"})
@@ -118,11 +132,13 @@ func buildMysqlBootContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container)
 
 // buildMysqlConfigContainer generate mysql config render caontainer spec
 func buildMysqlConfigContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container) {
+	secret := buildSecret(cr)
+
 	container.Image = cr.Spec.ConfigImage
 	container.ImagePullPolicy = cr.Spec.ImagePullPolicy
 	container.Name = "config"
 	container.Env = buildMysqlEnvs(cr)
-	container.EnvFrom = []corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: cr.Name + "-secret"}}}}
+	container.EnvFrom = []corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: secret.Name}}}}
 	container.VolumeMounts = buildMysqlVolumeMounts()
 	return container
 }

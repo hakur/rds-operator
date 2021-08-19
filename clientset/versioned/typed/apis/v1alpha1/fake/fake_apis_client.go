@@ -39,6 +39,10 @@ type FakeApisV1alpha1 struct {
 	*testing.Fake
 }
 
+func (c *FakeApisV1alpha1) Kafkas(namespace string) v1alpha1.KafkaInterface {
+	return &FakeKafkas{c, namespace}
+}
+
 func (c *FakeApisV1alpha1) Mysqls(namespace string) v1alpha1.MysqlInterface {
 	return &FakeMysqls{c, namespace}
 }

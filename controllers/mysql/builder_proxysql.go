@@ -14,6 +14,7 @@ import (
 func buildProxySQLVolumeMounts() (data []corev1.VolumeMount) {
 	data = append(data, corev1.VolumeMount{MountPath: "/var/lib/proxysql", Name: "data"})
 	data = append(data, corev1.VolumeMount{MountPath: "/etc/proxysql.cnf.d", Name: "cnf"})
+	data = append(data, corev1.VolumeMount{MountPath: "/etc/localtime", Name: "localtime"})
 	return
 }
 
@@ -29,6 +30,16 @@ func buildProxySQLVolume() (data []corev1.Volume) {
 			},
 		},
 	})
+
+	data = append(data, corev1.Volume{
+		Name: "localtime",
+		VolumeSource: corev1.VolumeSource{
+			HostPath: &corev1.HostPathVolumeSource{
+				Path: "/etc/localtime",
+			},
+		},
+	})
+
 	return
 }
 
@@ -44,25 +55,29 @@ func buildProxySQLEnvs(cr *rdsv1alpha1.Mysql) (data []corev1.EnvVar) {
 
 // buildProxySQLConfigContainer generate proxysql config render caontainer spec
 func buildProxySQLConfigContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container) {
+	secret := buildSecret(cr)
+
 	container.Image = cr.Spec.ConfigImage
 	container.ImagePullPolicy = cr.Spec.ImagePullPolicy
 	container.Name = "config"
 	container.Env = buildProxySQLEnvs(cr)
 	container.Env = append(container.Env, corev1.EnvVar{Name: "BOOTSTRAP_CLUSTER", Value: "false"})
 	container.Env = append(container.Env, corev1.EnvVar{Name: "CONFIG_TYPE", Value: "proxysql"})
-	container.EnvFrom = []corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: cr.Name + "-secret"}}}}
+	container.EnvFrom = []corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: secret.Name}}}}
 	container.VolumeMounts = buildProxySQLVolumeMounts()
 	return container
 }
 
 // buildProxySQLContainer generate proxysql container spec
 func buildProxySQLContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container) {
+	secret := buildSecret(cr)
+
 	container.Image = cr.Spec.ProxySQL.Image
 	container.ImagePullPolicy = cr.Spec.ImagePullPolicy
 	container.Name = "proxysql"
 	container.Env = buildProxySQLEnvs(cr)
 	container.VolumeMounts = buildProxySQLVolumeMounts()
-	container.EnvFrom = []corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: cr.Name + "-secret"}}}}
+	container.EnvFrom = []corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: secret.Name}}}}
 	container.Resources = cr.Spec.ProxySQL.Resources
 	container.LivenessProbe = cr.Spec.ProxySQL.LivenessProbe
 	container.ReadinessProbe = cr.Spec.ProxySQL.ReadinessProbe

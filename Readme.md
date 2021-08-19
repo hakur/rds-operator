@@ -4,13 +4,9 @@
         - [ ] 5.7.34
             - [x] MGR single primary (WIP)
             - [ ] MGR multi primary
-            - [ ] semi sync
-            - [ ] traditional master/slave replication
         - [ ] 8.0
             - [ ] MGR single primary (WIP)
             - [ ] MGR multi primary
-            - [ ] semi sync
-            - [ ] traditional master/slave replication
 
 * redis.rds.hakurei.cn/v1alpha1
     * redis version
