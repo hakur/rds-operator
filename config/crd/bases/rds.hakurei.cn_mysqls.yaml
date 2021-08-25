@@ -2011,8 +2011,6 @@ spec:
             - clusterMode
             - configImage
             - mysql
-            - mysqlRouter
-            - proxysql
             - storageClassName
             - timeZone
             type: object

@@ -95,8 +95,10 @@ func (t *MysqlReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Mysql) (err
 		return err
 	}
 
-	if err = t.applyProxySQL(ctx, cr); err != nil {
-		return err
+	if cr.Spec.ProxySQL != nil {
+		if err = t.applyProxySQL(ctx, cr); err != nil {
+			return err
+		}
 	}
 
 	if err = reconciler.RemovePVCRetentionMark(t.Client, ctx, cr.Namespace, reconciler.BuildCRPVCLabels(cr, cr)); err != nil {

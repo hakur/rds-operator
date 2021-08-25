@@ -51,9 +51,10 @@ spec:
             echo "mysql 3306 not ready"
             exit 1
           fi
-      initialDelaySeconds: 15
+      initialDelaySeconds: 5
       periodSeconds: 5
       timeoutSeconds: 4
+      failureThreshold: 10
     livenessProbe:
       exec:
         command:
@@ -66,9 +67,10 @@ spec:
           fi
           echo "mysql primary server not found, mgr cluster not health!"
           exit 1
-      initialDelaySeconds: 25
-      periodSeconds: 10
-      timeoutSeconds: 9
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 4
+      failureThreshold: 10
   proxysql: 
     image: rumia/proxysql:2.2.0
     mysqlVersion: "5.7.34"
@@ -89,9 +91,10 @@ spec:
               echo "proxysql 6032 not ready"
               exit 1
             fi
-      initialDelaySeconds: 15
+      initialDelaySeconds: 5
       periodSeconds: 5
       timeoutSeconds: 4
+      failureThreshold: 10
     livenessProbe:
       exec:
          command:
@@ -103,6 +106,7 @@ spec:
               echo "proxysql 6032 not ready"
               exit 1
             fi
-      initialDelaySeconds: 25
-      periodSeconds: 10
-      timeoutSeconds: 9
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 4
+      failureThreshold: 10

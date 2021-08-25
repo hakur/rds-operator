@@ -193,9 +193,9 @@ type MysqlSpec struct {
 	// Mysql mysql cluset options
 	Mysql MysqlOptions `json:"mysql"`
 	// ProxySQL proxysql options, use proxysql as mysql cluster proxy
-	ProxySQL *ProxySQLOptions `json:"proxysql"`
+	ProxySQL *ProxySQLOptions `json:"proxysql,omitempty"`
 	// MysqlRouter mysql router options, use mysql router as mysql cluster proxy
-	MysqlRouter *MysqlRouterOptions `json:"mysqlRouter"`
+	MysqlRouter *MysqlRouterOptions `json:"mysqlRouter,omitempty"`
 	// TimeZone timezone string , for example Asia/Shanghai
 	TimeZone string `json:"timeZone"`
 	// PriorityClassName pod priority class name for all pods under CR resource
