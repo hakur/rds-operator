@@ -33,4 +33,8 @@ type KafkaExpansion interface{}
 
 type MysqlExpansion interface{}
 
+type MysqlBackupExpansion interface{}
+
+type ProxySQLExpansion interface{}
+
 type RedisExpansion interface{}

@@ -47,6 +47,14 @@ func (c *FakeApisV1alpha1) Mysqls(namespace string) v1alpha1.MysqlInterface {
 	return &FakeMysqls{c, namespace}
 }
 
+func (c *FakeApisV1alpha1) MysqlBackups(namespace string) v1alpha1.MysqlBackupInterface {
+	return &FakeMysqlBackups{c, namespace}
+}
+
+func (c *FakeApisV1alpha1) ProxySQLs(namespace string) v1alpha1.ProxySQLInterface {
+	return &FakeProxySQLs{c, namespace}
+}
+
 func (c *FakeApisV1alpha1) Redises(namespace string) v1alpha1.RedisInterface {
 	return &FakeRedises{c, namespace}
 }

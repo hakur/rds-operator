@@ -15,5 +15,8 @@ func init() {
 	SchemeBuilder.Register(
 		&Mysql{}, &MysqlList{},
 		&Redis{}, &RedisList{},
+		&Kafka{}, &KafkaList{},
+		&MysqlBackup{}, &MysqlBackupList{},
+		&ProxySQL{}, &ProxySQLList{},
 	)
 }

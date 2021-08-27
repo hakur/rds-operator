@@ -6,32 +6,22 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.6.2
   creationTimestamp: null
-  name: mysqls.rds.hakurei.cn
+  name: mysqlbackups.rds.hakurei.cn
 spec:
   group: rds.hakurei.cn
   names:
-    kind: Mysql
-    listKind: MysqlList
-    plural: mysqls
+    kind: MysqlBackup
+    listKind: MysqlBackupList
+    plural: mysqlbackups
     shortNames:
-    - mc
-    singular: mysql
+    - mcb
+    singular: mysqlbackup
   scope: Namespaced
   versions:
-  - additionalPrinterColumns:
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
-    - jsonPath: .status.phase
-      name: phase
-      type: string
-    - jsonPath: .spec.clusterMode
-      name: cluster_mode
-      type: string
-    name: v1alpha1
+  - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Mysql is the Schema for the mysqls API
+        description: MysqlBackup is the Schema for the mysqls API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

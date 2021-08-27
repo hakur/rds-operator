@@ -39,6 +39,8 @@ type ApisV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	KafkasGetter
 	MysqlsGetter
+	MysqlBackupsGetter
+	ProxySQLsGetter
 	RedisesGetter
 }
 
@@ -53,6 +55,14 @@ func (c *ApisV1alpha1Client) Kafkas(namespace string) KafkaInterface {
 
 func (c *ApisV1alpha1Client) Mysqls(namespace string) MysqlInterface {
 	return newMysqls(c, namespace)
+}
+
+func (c *ApisV1alpha1Client) MysqlBackups(namespace string) MysqlBackupInterface {
+	return newMysqlBackups(c, namespace)
+}
+
+func (c *ApisV1alpha1Client) ProxySQLs(namespace string) ProxySQLInterface {
+	return newProxySQLs(c, namespace)
 }
 
 func (c *ApisV1alpha1Client) Redises(namespace string) RedisInterface {

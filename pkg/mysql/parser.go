@@ -67,10 +67,10 @@ func (t *ConfigParser) DeleteSection(sectionName string, section *ConfigSection)
 	delete(t.Data, sectionName)
 }
 
-func (t *ConfigParser) SetSection(sectionName string, section *ConfigSection) {
+func (t *ConfigParser) SetSection(section *ConfigSection) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
-	t.Data[sectionName] = section
+	t.Data[section.Name] = section
 }
 
 func (t *ConfigParser) GetSection(sectionName string) (section *ConfigSection, err error) {

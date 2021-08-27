@@ -45,6 +45,22 @@ type MysqlListerExpansion interface{}
 // MysqlNamespaceLister.
 type MysqlNamespaceListerExpansion interface{}
 
+// MysqlBackupListerExpansion allows custom methods to be added to
+// MysqlBackupLister.
+type MysqlBackupListerExpansion interface{}
+
+// MysqlBackupNamespaceListerExpansion allows custom methods to be added to
+// MysqlBackupNamespaceLister.
+type MysqlBackupNamespaceListerExpansion interface{}
+
+// ProxySQLListerExpansion allows custom methods to be added to
+// ProxySQLLister.
+type ProxySQLListerExpansion interface{}
+
+// ProxySQLNamespaceListerExpansion allows custom methods to be added to
+// ProxySQLNamespaceLister.
+type ProxySQLNamespaceListerExpansion interface{}
+
 // RedisListerExpansion allows custom methods to be added to
 // RedisLister.
 type RedisListerExpansion interface{}
