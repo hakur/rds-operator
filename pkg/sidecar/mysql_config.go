@@ -83,13 +83,13 @@ func (t *mysqlConfigCommand) mgrmpConfig() (fileContent string) {
 func (t *mysqlConfigCommand) semiSyncConfig() (fileContent string) {
 	writer := mysql.NewConfigParser()
 	mysqld := mysql.NewConfigSection("mysqld")
-	mysqld.Set("plugin_load_add", "semisync_slave.so")
-	mysqld.Set("plugin_load_add", "semisync_master.so")
+	mysqld.Set("plugin_load_add", "semisync_master.so;semisync_slave.so")
 	mysqld.Set("master_info_repository", "TABLE")
 	mysqld.Set("rpl_semi_sync_master_wait_point", "AFTER_SYNC")
 	mysqld.Set("log-slave-updates", "ON")
 	mysqld.Set("slave-parallel-type", "LOGICAL_CLOCK")
 	mysqld.Set("slave_parallel_workers", "16")
+	mysqld.Set("server-id", strconv.Itoa(getMysqlServerID()))
 
 	writer.SetSection(mysqld)
 	fileContent = writer.String()

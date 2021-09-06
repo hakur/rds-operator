@@ -1,0 +1,37 @@
+kind: Mysql
+apiVersion: rds.hakurei.cn/v1alpha1
+metadata:
+  name: yuxing
+spec:
+  imagePullPolicy: IfNotPresent
+  rootPassword: "zerocube"
+  clusterMode: SemiSync
+  backupPolicy: BackupDataDir
+  storageClassName: hostpath
+  timeZone: Asia/Shanghai
+  configImage: rumia/rds-sidecar
+  image: mysql/mysql-server:5.7.34
+  replicas: 2
+  storageSize: 1Gi
+  maxConn: 300
+  whitelist: # most of time , it's kubernetes Pod CIDR and Service CIDR
+    - "10.0.0.0/8"
+  extraConfigDir: /etc/my.cnf.d/
+  users:
+  - databaseTarget: "*.*"
+    domain: "%"
+    password: "monitor_me"
+    privileges:
+      - "REPLICATION SLAVE"
+      - "REPLICATION CLIENT"
+      - "SELECT"
+    username: monitor
+  - databaseTarget: "*.*"
+    domain: "%"
+    password: "replication"
+    privileges:
+      - "REPLICATION SLAVE"
+      - "REPLICATION CLIENT"
+      - "SELECT"
+    username: mgr
+  

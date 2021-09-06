@@ -1156,9 +1156,6 @@ spec:
                 description: ImagePullPolicy all pods image pull policy，value should
                   keep with corev1.PullPolicy
                 type: string
-              masterReplicas:
-                description: Replicas Kafka副本数量
-                type: integer
               password:
                 description: Password 密码
                 type: string
@@ -1489,6 +1486,10 @@ spec:
                 required:
                 - image
                 type: object
+              replicas:
+                description: Replicas Kafka副本数量
+                format: int32
+                type: integer
               resources:
                 description: 'Compute Resources required by this container. Cannot
                   be updated. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
@@ -1569,8 +1570,8 @@ spec:
             required:
             - Kafka
             - dataReplicas
-            - masterReplicas
             - proxy
+            - replicas
             - storageClassName
             - timeZone
             type: object

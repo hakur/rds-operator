@@ -40,6 +40,11 @@ type MysqlMGRSinglePrimaryOptions struct {
 	MGRRetries int `json:"mgrRetries,omitempty"`
 }
 
+type MysqlSemiSyncOptions struct {
+	// DoubleMaster if true , mysql-0 and mysql-1 will be cluster masters,they copy data from each other
+	DoubleMaster bool `json:"doubleMaster,omitempty"`
+}
+
 // MysqlUser mysql user settings
 type MysqlUser struct {
 	// Username mysql login account name
@@ -91,8 +96,6 @@ type MysqlSpec struct {
 	PVCRetentionSeconds *int `json:"pvcRetentionSeconds,omitempty"`
 	// Image mysql image
 	Image string `json:"image"`
-	// MasterReplicas master pod count
-	MasterReplicas *int32 `json:"masterReplicas,omitempty"`
 	// Replicas mysql cluster pod total count,contains master and slave
 	Replicas *int32 `json:"replicas,omitempty"`
 	// StorageSize pvc disk size
@@ -100,8 +103,11 @@ type MysqlSpec struct {
 	// Whitelist most of time it's kuberenetes pod CIDR and service CIDR, for example []string{"10.24.0.0/16","10.25.0.0/16"}
 	Whitelist []string `json:"whitelist"`
 	// MGRSP mysql multi group replication single primary mode options
-	MGRSP          *MysqlMGRSinglePrimaryOptions `json:"mgrsp,omitempty"`
-	ExtraConfigDir *string                       `json:"extraConfigDir,omitempty"`
+	MGRSP *MysqlMGRSinglePrimaryOptions `json:"mgrsp,omitempty"`
+	// SemiSync mysql semi sync replication options
+	SemiSync *MysqlSemiSyncOptions `json:"semiSync,omitempty"`
+	// ExtraConfigDir my.cnf include dir
+	ExtraConfigDir *string `json:"extraConfigDir,omitempty"`
 	// Compute Resources required by this container.
 	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/

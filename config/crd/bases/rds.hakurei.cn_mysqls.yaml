@@ -886,6 +886,7 @@ spec:
                   config and boostrap mysql cluster
                 type: string
               extraConfigDir:
+                description: ExtraConfigDir my.cnf include dir
                 type: string
               image:
                 description: Image mysql image
@@ -1021,10 +1022,6 @@ spec:
                     format: int32
                     type: integer
                 type: object
-              masterReplicas:
-                description: MasterReplicas master pod count
-                format: int32
-                type: integer
               maxConn:
                 type: integer
               mgrsp:
@@ -1216,6 +1213,14 @@ spec:
                 description: RootPassword mysql root password, if empty, an will allow
                   empty password login
                 type: string
+              semiSync:
+                description: SemiSync mysql semi sync replication options
+                properties:
+                  doubleMaster:
+                    description: DoubleMaster if true , mysql-0 and mysql-1 will be
+                      cluster masters,they copy data from each other
+                    type: boolean
+                type: object
               serviceAccountName:
                 description: 'ServiceAccountName is the name of the ServiceAccount
                   to use to run this pod. More info: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/'

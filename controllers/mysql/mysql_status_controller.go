@@ -14,6 +14,11 @@ import (
 
 // checkClusterStatus check cluster if is running , if not running, try to boostrap cluster
 func (t *MysqlReconciler) checkClusterStatus(ctx context.Context, cr *rdsv1alpha1.Mysql) (err error) {
+	if cr.DeletionGracePeriodSeconds != nil {
+		cr.Status.Phase = rdsv1alpha1.MysqlPhaseTerminating
+		return nil
+	}
+
 	var pods corev1.PodList
 	if err = t.List(ctx, &pods, client.InNamespace(cr.Namespace), client.MatchingLabels(builder.BuildMysqlLabels(cr))); err != nil && client.IgnoreNotFound(err) != nil {
 		return err

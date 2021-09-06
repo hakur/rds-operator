@@ -145,8 +145,10 @@ func (t *MysqlReconciler) applyMysql(ctx context.Context, cr *rdsv1alpha1.Mysql)
 	cnfConfigMap := mysqlBuilder.BuildMyCnfCM(cr)
 	scriptsConfigMap, err := util.BuildScriptsCM(cr.Namespace, cr.Name+"-scripts", builder.BuildMysqlLabels(cr), []string{
 		"util.sh",
-		"mysql/mysql-cluster.sh",
 		"mysql/mysql.sh",
+		"mysql/mysql-cluster.sh",
+		"mysql/mysql-mgrsp.sh",
+		"mysql/mysql-semi-sync.sh",
 	})
 	if err != nil {
 		return err
