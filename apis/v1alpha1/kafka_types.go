@@ -78,7 +78,7 @@ type KafkaSpec struct {
 	// Password 密码
 	Password *string `json:"password,omitempty"`
 	// Replicas Kafka副本数量
-	MasterReplicas int `json:"masterReplicas"`
+	Replicas *int32 `json:"replicas"`
 	// DataReplicas 数据副本数
 	DataReplicas int `json:"dataReplicas"`
 	// StorageClassName all pods storage class name

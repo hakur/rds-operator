@@ -12,16 +12,29 @@ import (
 // BuildSecret generate secret environment variables for mysql pods and proxysql pods
 func BuildSecret(cr *rdsv1alpha1.Mysql) (secret *corev1.Secret) {
 	var seeds string
+	var semiSyncMasters string
 	var mysqlUsers string
+	var semiSyncDoubleMaster bool
 	mysqlMaxConn := "300"
 	if cr.Spec.MaxConn != nil {
 		mysqlMaxConn = strconv.Itoa(*cr.Spec.MaxConn)
 	}
 
 	for i := 0; i < int(*cr.Spec.Replicas); i++ {
-		seeds += cr.Name + "-mysql-" + strconv.Itoa(i) + " "
+		mysqlhost := cr.Name + "-mysql-" + strconv.Itoa(i) + " "
+		seeds += mysqlhost
+
+		if i == 0 {
+			semiSyncMasters = mysqlhost
+		}
+
+		if cr.Spec.SemiSync != nil && cr.Spec.SemiSync.DoubleMaster && i == 1 {
+			semiSyncDoubleMaster = true
+			semiSyncMasters += mysqlhost
+		}
 	}
 	seeds = strings.Trim(seeds, " ")
+	semiSyncMasters = strings.Trim(semiSyncMasters, " ")
 
 	buf, _ := json.Marshal(cr.Spec.Users)
 	mysqlUsers = string(buf)
@@ -45,6 +58,11 @@ func BuildSecret(cr *rdsv1alpha1.Mysql) (secret *corev1.Secret) {
 		"MYSQL_NODES":          []byte(seeds),
 		"MYSQL_REPL_USER":      []byte("root"),
 		"MYSQL_REPL_PASSWORD":  []byte(*cr.Spec.RootPassword),
+	}
+
+	if cr.Spec.ClusterMode == rdsv1alpha1.ModeSemiSync {
+		secret.Data["SEMI_SYNC_DOUBLE_MASTER"] = []byte(strconv.FormatBool(semiSyncDoubleMaster))
+		secret.Data["SEMI_SYNC_FIXED_MASTERS"] = []byte(semiSyncMasters)
 	}
 
 	if cr.Spec.ExtraConfigDir != nil {

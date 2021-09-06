@@ -11,15 +11,11 @@ spec:
   timeZone: Asia/Shanghai
   configImage: rumia/rds-sidecar
   image: mysql/mysql-server:5.7.34
-  masterReplicas: 1
   replicas: 3
   storageSize: 1Gi
   maxConn: 300
   whitelist: # most of time , it's kubernetes Pod CIDR and Service CIDR
     - "10.0.0.0/8"
-  mgrsp:
-    applierThreshold: 2500
-    mgrRetries: 100
   extraConfigDir: /etc/my.cnf.d/
   users:
   - databaseTarget: "*.*"
