@@ -170,7 +170,7 @@ func (t *MysqlBuilder) buildMysqlInitContainer(cr *rdsv1alpha1.Mysql) (container
 }
 
 // BuildSts generate mysql statefulset
-func (t *MysqlBuilder) BuildSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet, err error) {
+func (t *MysqlBuilder) BuildSts() (sts *appsv1.StatefulSet, err error) {
 	var spec appsv1.StatefulSetSpec
 	var podTemplateSpec corev1.PodTemplateSpec
 	var mysqlDataVolumeClaim corev1.PersistentVolumeClaim
@@ -179,8 +179,8 @@ func (t *MysqlBuilder) BuildSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet,
 	sts = new(appsv1.StatefulSet)
 
 	sts.ObjectMeta = metav1.ObjectMeta{
-		Name:      cr.Name + "-mysql",
-		Namespace: cr.Namespace,
+		Name:      t.CR.Name + "-mysql",
+		Namespace: t.CR.Namespace,
 		Labels:    BuildMysqlLabels(t.CR),
 	}
 
@@ -189,27 +189,27 @@ func (t *MysqlBuilder) BuildSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet,
 		APIVersion: "apps/v1",
 	}
 
-	spec.Replicas = cr.Spec.Replicas
-	spec.ServiceName = cr.Name + "-mysql"
+	spec.Replicas = t.CR.Spec.Replicas
+	spec.ServiceName = t.CR.Name + "-mysql"
 	spec.Selector = &metav1.LabelSelector{MatchLabels: BuildMysqlLabels(t.CR)}
 
 	podTemplateSpec.ObjectMeta = metav1.ObjectMeta{Labels: BuildMysqlLabels(t.CR)}
-	podTemplateSpec.Spec.Volumes = t.buildMysqlVolumes(cr)
+	podTemplateSpec.Spec.Volumes = t.buildMysqlVolumes(t.CR)
 	podTemplateSpec.Spec.ShareProcessNamespace = &shareProcessNamespace
-	podTemplateSpec.Spec.InitContainers = []corev1.Container{t.buildMysqlInitContainer(cr)}
-	podTemplateSpec.Spec.Containers = []corev1.Container{t.buildMysqlContainer(cr)}
-	podTemplateSpec.Spec.PriorityClassName = cr.Spec.PriorityClassName
-	podTemplateSpec.Spec.Affinity = cr.Spec.Affinity
-	podTemplateSpec.Spec.Tolerations = cr.Spec.Tolerations
+	podTemplateSpec.Spec.InitContainers = []corev1.Container{t.buildMysqlInitContainer(t.CR)}
+	podTemplateSpec.Spec.Containers = []corev1.Container{t.buildMysqlContainer(t.CR)}
+	podTemplateSpec.Spec.PriorityClassName = t.CR.Spec.PriorityClassName
+	podTemplateSpec.Spec.Affinity = t.CR.Spec.Affinity
+	podTemplateSpec.Spec.Tolerations = t.CR.Spec.Tolerations
 
-	quantity, err := resource.ParseQuantity(cr.Spec.StorageSize)
+	quantity, err := resource.ParseQuantity(t.CR.Spec.StorageSize)
 	if err != nil {
 		return nil, err
 	}
 
-	mysqlDataVolumeClaim.ObjectMeta = metav1.ObjectMeta{Name: "data", Labels: reconciler.BuildCRPVCLabels(cr, cr)} // use labels for gc , gc date is annotation types.PVCDeleteDateAnnotationName
+	mysqlDataVolumeClaim.ObjectMeta = metav1.ObjectMeta{Name: "data", Labels: reconciler.BuildCRPVCLabels(t.CR, t.CR)} // use labels for gc , gc date is annotation types.PVCDeleteDateAnnotationName
 	mysqlDataVolumeClaim.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"}
-	mysqlDataVolumeClaim.Spec.StorageClassName = &cr.Spec.StorageClassName
+	mysqlDataVolumeClaim.Spec.StorageClassName = &t.CR.Spec.StorageClassName
 	mysqlDataVolumeClaim.Spec.Resources = corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: quantity}}
 
 	spec.Template = podTemplateSpec

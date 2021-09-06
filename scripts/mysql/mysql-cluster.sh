@@ -1,8 +1,5 @@
 #!/bin/bash
 
-source mysql-mgrsp.sh
-source mysql-semi-sync.sh
-
 ################## master infomation functions ########################
 
 function FindMasterServer() {

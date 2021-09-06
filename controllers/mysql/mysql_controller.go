@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -48,15 +47,6 @@ type MysqlReconciler struct {
 //+kubebuilder:rbac:groups=v1,resources=secret,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the Mysql object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.6/pkg/reconcile
 func (t *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r ctrl.Result, err error) {
 	cr := &rdsv1alpha1.Mysql{}
 
@@ -68,20 +58,21 @@ func (t *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r ct
 		return r, client.IgnoreNotFound(err)
 	}
 
-	// check for cluster status
-	if err = t.checkClusterStatus(ctx, cr); err != nil {
-		if errors.Is(err, types.ErrPodNotRunning) || errors.Is(err, types.ErrMasterNoutFound) || errors.Is(err, types.ErrContainerNotFound) {
+	if cr.GetDeletionTimestamp().IsZero() {
+		// check for cluster status
+		if err = t.checkClusterStatus(ctx, cr); err != nil {
 			r.Requeue = true
-			r.RequeueAfter = time.Second * 3
-			return r, nil
+			if errors.Is(err, types.ErrPodNotRunning) || errors.Is(err, types.ErrMasterNoutFound) || errors.Is(err, types.ErrContainerNotFound) || errors.Is(err, types.ErrReplicasNotDesired) {
+				return r, nil
+			}
+
+			return r, err
 		}
-		return r, err
-	}
 
-	if err = t.Status().Update(ctx, cr); err != nil {
-		return r, fmt.Errorf("status update failed -> %w", err)
+		if err = t.Status().Update(ctx, cr); err != nil {
+			return r, fmt.Errorf("status update failed -> %w", err)
+		}
 	}
-
 	return ctrl.Result{}, nil
 }
 
@@ -135,7 +126,7 @@ func (t *MysqlReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Mysql) (err
 // applyMysql create or update mysql resources
 func (t *MysqlReconciler) applyMysql(ctx context.Context, cr *rdsv1alpha1.Mysql) (err error) {
 	mysqlBuilder := builder.MysqlBuilder{CR: cr}
-	statefulset, err := mysqlBuilder.BuildSts(cr)
+	statefulset, err := mysqlBuilder.BuildSts()
 	if err != nil {
 		return err
 	}
@@ -149,6 +140,7 @@ func (t *MysqlReconciler) applyMysql(ctx context.Context, cr *rdsv1alpha1.Mysql)
 		"mysql/mysql-cluster.sh",
 		"mysql/mysql-mgrsp.sh",
 		"mysql/mysql-semi-sync.sh",
+		"mysql/mysql-backup.sh",
 	})
 	if err != nil {
 		return err

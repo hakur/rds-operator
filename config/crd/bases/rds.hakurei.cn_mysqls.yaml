@@ -873,14 +873,20 @@ spec:
                         type: array
                     type: object
                 type: object
-              backupPolicy:
-                description: BackupPolicy mysql data backup methos , values are [
-                  BackupDataDir ]
-                type: string
+              args:
+                description: Command Kafka container command args
+                items:
+                  type: string
+                type: array
               clusterMode:
                 description: ClusterMode mysql cluster mode,values are [ MGRMP MGRSP
                   SemiSync Async ]
                 type: string
+              command:
+                description: Command Kafka container command
+                items:
+                  type: string
+                type: array
               configImage:
                 description: ConfigImage mysql initContainer for render mysql/proxysql
                   config and boostrap mysql cluster
@@ -889,7 +895,7 @@ spec:
                 description: ExtraConfigDir my.cnf include dir
                 type: string
               image:
-                description: Image mysql image
+                description: Image main container image
                 type: string
               imagePullPolicy:
                 description: ImagePullPolicy all pods image pull policy，value should
@@ -1034,6 +1040,18 @@ spec:
                   mgrRetries:
                     description: 'MGRRtries mysql mgr variable: loose-group_replication_recovery_retry_count'
                     type: integer
+                type: object
+              pod:
+                description: Pod pod settings
+                properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  labels:
+                    additionalProperties:
+                      type: string
+                    type: object
                 type: object
               priorityClassName:
                 description: PriorityClassName pod priority class name for all pods
@@ -1226,13 +1244,13 @@ spec:
                   to use to run this pod. More info: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/'
                 type: string
               storageClassName:
-                description: StorageClassName all pods storage class name
                 type: string
               storageSize:
                 description: StorageSize pvc disk size
                 type: string
               timeZone:
-                description: TimeZone timezone string , for example Asia/Shanghai
+                description: StorageClassName all pods storage class name TimeZone
+                  timezone string , for example Asia/Shanghai
                 type: string
               tolerations:
                 description: Tolerations all pods tolerations，should keep with corev1.Toleration

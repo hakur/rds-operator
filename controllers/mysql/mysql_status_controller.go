@@ -14,11 +14,6 @@ import (
 
 // checkClusterStatus check cluster if is running , if not running, try to boostrap cluster
 func (t *MysqlReconciler) checkClusterStatus(ctx context.Context, cr *rdsv1alpha1.Mysql) (err error) {
-	if cr.DeletionGracePeriodSeconds != nil {
-		cr.Status.Phase = rdsv1alpha1.MysqlPhaseTerminating
-		return nil
-	}
-
 	var pods corev1.PodList
 	if err = t.List(ctx, &pods, client.InNamespace(cr.Namespace), client.MatchingLabels(builder.BuildMysqlLabels(cr))); err != nil && client.IgnoreNotFound(err) != nil {
 		return err
@@ -30,23 +25,23 @@ func (t *MysqlReconciler) checkClusterStatus(ctx context.Context, cr *rdsv1alpha
 	}
 
 	var podNames []string
+	var allPodsRunning bool = true
 	firstRunningPodName := ""
-	allPodsRunning := true
 	for _, pod := range pods.Items {
 		if pod.Status.Phase == corev1.PodRunning {
-			firstRunningPodName = pod.Name
-			podNames = append(podNames, pod.Name)
-			break
+			if firstRunningPodName == "" {
+				cr.Status.Phase = rdsv1alpha1.MysqlPhaseNotReady
+				firstRunningPodName = pod.Name
+			}
 		} else {
 			allPodsRunning = false
 		}
+
+		podNames = append(podNames, pod.Name)
 	}
 
-	if allPodsRunning {
+	if firstRunningPodName == "" && !allPodsRunning {
 		cr.Status.Phase = rdsv1alpha1.MysqlPhaseNotReady
-	}
-
-	if firstRunningPodName == "" {
 		return types.ErrPodNotRunning
 	}
 
@@ -59,9 +54,13 @@ func (t *MysqlReconciler) checkClusterStatus(ctx context.Context, cr *rdsv1alpha
 		return err
 	}
 
+	if len(cr.Status.Members) != len(podNames) {
+		cr.Status.Phase = rdsv1alpha1.MysqlPhaseNotReady
+		return fmt.Errorf("%w", types.ErrReplicasNotDesired)
+	}
+
 	if master == "" {
-		err = fmt.Errorf("%w", types.ErrMasterNoutFound)
-		return err
+		return fmt.Errorf("%w", types.ErrMasterNoutFound)
 	}
 
 	master = strings.Trim(master, ",")

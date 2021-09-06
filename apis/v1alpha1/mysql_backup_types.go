@@ -6,42 +6,46 @@ import (
 
 // S3Config aws s3 object storage server config
 type S3Config struct {
-	AccessKey   string
-	SecurityKey string
-	Endpoint    string
-	Bucket      string
+	AccessKey   string `json:"accessKey"`
+	SecurityKey string `json:"securityKey"`
+	Endpoint    string `json:"endpoint"`
+	Bucket      string `json:"bucket"`
+	Path        string `json:"path"`
 }
 
-// ScpConfig scp linux server config
-type ScpConfig struct {
-	Host       string
-	Port       int
-	Username   string
-	Password   string
-	RemotePath string
-}
-
-// MysqlBackupStorage mysql backup files storage backend
-type MysqlBackupStorage struct {
-	// S3 use aws s3 object storage service for store backup files
-	S3 *S3Config `json:"s3,omitempty"`
-	// Pvc use a pvc for store backup files
-	Pvc *string `json:"pvc,omitempty"`
-	// Scp use a linux scp server for store backup files
-	Scp *ScpConfig `json:"scp,omitempty"`
+// MysqlHost mysql back server connection settings
+type MysqlHost struct {
+	Host string `json:"host"`
+	Port int    `json:"port"`
 }
 
 // MysqlBackupSpec defines the desired state of Mysql
 type MysqlBackupSpec struct {
-	// MysqlName mysql custom resource name
-	MysqlName string `json:"mysqlName"`
-	Storage   MysqlBackupStorage
+	CommonField `json:",inline"`
+	// S3 use aws s3 object storage service for store backup files
+	S3          *S3Config   `json:"s3,omitempty"`
+	Hosts       []MysqlHost `json:"mysql,omitempty"`
+	ClusterMode ClusterMode `json:"clusterMode"`
+	// PVCName if pvc name is empty, a emptydir will be used as tmp storage for mysql backup files
+	PVCName *string `json:"pvcName,omitempty"`
+	// StorageSize mysql backup files tmp storage dir max size
+	StorageSize string `json:"storageSize"`
+	// Username username of all mysql hosts
+	Username string `json:"username"`
+	// Password password of all mysql hosts
+	Password string `json:"password"`
+	// Schedule k8s/linux cronjob schedule
+	Schedule             string   `json:"schedule"`
+	InitContainerCommand []string `json:"initContainerCommand"`
+	InitContainerArgs    []string `json:"initContainerArgs"`
+	InitContainerImage   string   `json:"initContainerImage"`
+	UseZlibCompress      *bool    `json:"useZlibCompress,omitempty"`
 }
 
 // MysqlBackupStatus defines the observed state of Mysql
 type MysqlBackupStatus struct {
-	LastErrMsg string
-	Phase      string
+	LastErrMsg string `json:"lastErrMsg,omitempty"`
+	Phase      string `json:"phase,omitempty"`
 }
 
 //+genclient
@@ -54,8 +58,8 @@ type MysqlBackup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   MysqlSpec   `json:"spec,omitempty"`
-	Status MysqlStatus `json:"status,omitempty"`
+	Spec   MysqlBackupSpec   `json:"spec,omitempty"`
+	Status MysqlBackupStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -64,5 +68,5 @@ type MysqlBackup struct {
 type MysqlBackupList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Mysql `json:"items"`
+	Items           []MysqlBackup `json:"items"`
 }

@@ -28,7 +28,7 @@ type ExecPodOnceOpts struct {
 }
 
 // ExecPodOnce exec a command in a pod
-func ExecPodOnce(opts ExecPodOnceOpts) (result []byte, err error, stdErr []byte) {
+func ExecPodOnce(opts ExecPodOnceOpts) (result []byte, err error) {
 	restclient := opts.KubeClient.CoreV1().RESTClient().Post()
 	req := restclient.Resource("pods").Name(opts.PodName).Namespace(opts.Namespace).SubResource("exec").Timeout(opts.Timeout)
 
@@ -64,7 +64,10 @@ func ExecPodOnce(opts ExecPodOnceOpts) (result []byte, err error, stdErr []byte)
 	}
 
 	result = bytes.TrimSpace(stdoutBuf.Bytes())
-	stdErr = bytes.TrimSpace(stderrBuf.Bytes())
+	stdErr := bytes.TrimSpace(stderrBuf.Bytes())
+	if len(stdErr) > 0 {
+		err = fmt.Errorf("spdy executor exec [namespace=%s] [pod=%s] [container=%s] strandard error -> %s", opts.Namespace, opts.PodName, opts.ContainerName, string(stdErr))
+	}
 
 	return
 }
