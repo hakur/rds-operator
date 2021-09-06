@@ -39,6 +39,10 @@ type Interface interface {
 	Kafkas() KafkaInformer
 	// Mysqls returns a MysqlInformer.
 	Mysqls() MysqlInformer
+	// MysqlBackups returns a MysqlBackupInformer.
+	MysqlBackups() MysqlBackupInformer
+	// ProxySQLs returns a ProxySQLInformer.
+	ProxySQLs() ProxySQLInformer
 	// Redises returns a RedisInformer.
 	Redises() RedisInformer
 }
@@ -62,6 +66,16 @@ func (v *version) Kafkas() KafkaInformer {
 // Mysqls returns a MysqlInformer.
 func (v *version) Mysqls() MysqlInformer {
 	return &mysqlInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// MysqlBackups returns a MysqlBackupInformer.
+func (v *version) MysqlBackups() MysqlBackupInformer {
+	return &mysqlBackupInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// ProxySQLs returns a ProxySQLInformer.
+func (v *version) ProxySQLs() ProxySQLInformer {
+	return &proxySQLInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Redises returns a RedisInformer.

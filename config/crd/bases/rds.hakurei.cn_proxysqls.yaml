@@ -6,32 +6,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.6.2
   creationTimestamp: null
-  name: mysqls.rds.hakurei.cn
+  name: proxysqls.rds.hakurei.cn
 spec:
   group: rds.hakurei.cn
   names:
-    kind: Mysql
-    listKind: MysqlList
-    plural: mysqls
-    shortNames:
-    - mc
-    singular: mysql
+    kind: ProxySQL
+    listKind: ProxySQLList
+    plural: proxysqls
+    singular: proxysql
   scope: Namespaced
   versions:
-  - additionalPrinterColumns:
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
-    - jsonPath: .status.phase
-      name: phase
-      type: string
-    - jsonPath: .spec.clusterMode
-      name: cluster_mode
-      type: string
-    name: v1alpha1
+  - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Mysql is the Schema for the mysqls API
+        description: ProxySQL is the Schema for the ProxySQLs API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -46,7 +34,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: MysqlSpec defines the desired state of Mysql
+            description: ProxySQLSpec defines the desired state of ProxySQL
             properties:
               affinity:
                 description: If specified, the pod's scheduling constraints
@@ -873,22 +861,12 @@ spec:
                         type: array
                     type: object
                 type: object
-              backupPolicy:
-                description: BackupPolicy mysql data backup methos , values are [
-                  BackupDataDir ]
-                type: string
-              clusterMode:
-                description: ClusterMode mysql cluster mode,values are [ MGRMP MGRSP
-                  SemiSync Async ]
-                type: string
               configImage:
                 description: ConfigImage mysql initContainer for render mysql/proxysql
                   config and boostrap mysql cluster
                 type: string
-              extraConfigDir:
-                type: string
               image:
-                description: Image mysql image
+                description: Image oci image full url ,for exmaple 'docker.io/library/nginx:1.18'
                 type: string
               imagePullPolicy:
                 description: ImagePullPolicy all pods image pull policy，value should
@@ -1021,23 +999,17 @@ spec:
                     format: int32
                     type: integer
                 type: object
-              masterReplicas:
-                description: MasterReplicas master pod count
+              mysqlVersion:
+                description: MysqlVersion specific version text will return to mysql
+                  client that connected on proxysql
+                type: string
+              nodePort:
+                description: NodePort  nodeport of proxysql service if this value
+                  is nil, means no nodePort should be open if this value is zero,means
+                  open random nodePort if this value is zero,means open a specific
+                  nodePort
                 format: int32
                 type: integer
-              maxConn:
-                type: integer
-              mgrsp:
-                description: MGRSP mysql multi group replication single primary mode
-                  options
-                properties:
-                  applierThreshold:
-                    description: 'ApplierThreshold mysql mgr variable: loose-group_replication_flow_control_applier_threshold'
-                    type: integer
-                  mgrRetries:
-                    description: 'MGRRtries mysql mgr variable: loose-group_replication_recovery_retry_count'
-                    type: integer
-                type: object
               priorityClassName:
                 description: PriorityClassName pod priority class name for all pods
                   under CR resource
@@ -1181,8 +1153,8 @@ spec:
                     type: integer
                 type: object
               replicas:
-                description: Replicas mysql cluster pod total count,contains master
-                  and slave
+                description: Replicas proxysql pod total count,contains master and
+                  slave
                 format: int32
                 type: integer
               resources:
@@ -1212,10 +1184,6 @@ spec:
                       to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                     type: object
                 type: object
-              rootPassword:
-                description: RootPassword mysql root password, if empty, an will allow
-                  empty password login
-                type: string
               serviceAccountName:
                 description: 'ServiceAccountName is the name of the ServiceAccount
                   to use to run this pod. More info: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/'
@@ -1269,72 +1237,17 @@ spec:
                       type: string
                   type: object
                 type: array
-              users:
-                description: MysqlUsers a list of users will be created when initialize
-                  cluster
-                items:
-                  description: MysqlUser mysql user settings
-                  properties:
-                    databaseTarget:
-                      description: 'DatabaseTarget which database or tables will granted
-                        privileges to this user. for example : grant all privileges
-                        on *.* to user xxx@''%'' indentified by ''xxxxx'', in this
-                        case, DatabaseTarget value should be ''*.*'''
-                      type: string
-                    domain:
-                      description: 'Domain user login domain , for example : ''%'''
-                      type: string
-                    password:
-                      description: Password mysql login password of this user
-                      type: string
-                    privileges:
-                      description: 'Privileges mysql grant sql privileges, for example
-                        : []stirng{ "SELECT" ,"REPLICATION CLIENT"} or []string{"ALL
-                        PRIVILEGES"}'
-                      items:
-                        type: string
-                      type: array
-                    username:
-                      description: Username mysql login account name
-                      type: string
-                  required:
-                  - databaseTarget
-                  - domain
-                  - password
-                  - privileges
-                  - username
-                  type: object
-                type: array
-              whitelist:
-                description: Whitelist most of time it's kuberenetes pod CIDR and
-                  service CIDR, for example []string{"10.24.0.0/16","10.25.0.0/16"}
-                items:
-                  type: string
-                type: array
             required:
-            - clusterMode
             - configImage
             - image
+            - mysqlVersion
+            - nodePort
             - storageClassName
             - storageSize
             - timeZone
-            - whitelist
             type: object
           status:
-            description: MysqlStatus defines the observed state of Mysql
-            properties:
-              masters:
-                description: Masters current mysql cluster masters
-                items:
-                  type: string
-                type: array
-              members:
-                items:
-                  type: string
-                type: array
-              phase:
-                description: ClusterPhase mysql cluster status
-                type: string
+            description: ProxySQLStatus defines the observed state of ProxySQL
             type: object
         type: object
     served: true

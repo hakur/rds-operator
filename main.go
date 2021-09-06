@@ -4,6 +4,7 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -15,6 +16,7 @@ import (
 	"github.com/bombsimon/logrusr"
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
 	mysqlcontrollers "github.com/hakur/rds-operator/controllers/mysql"
+	proxysqlcontrollers "github.com/hakur/rds-operator/controllers/proxysql"
 	rediscontrollers "github.com/hakur/rds-operator/controllers/redis"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -23,9 +25,9 @@ import (
 
 var (
 	scheme               = runtime.NewScheme()
-	metricsAddr          = kingpin.Arg("metrics-bind-address", "metrics http 监听地址").Default(":8080").String()
-	probeAddr            = kingpin.Arg("health-probe-bind-address", "liveness 和 readyness 的 http 监听地址").Default(":8081").String()
-	enableLeaderElection = kingpin.Arg("leader-elect", "是否启用选举，如果启用选举将只有一个 operator pod 会工作").Default("false").Bool()
+	metricsAddr          = kingpin.Arg("metrics-bind-address", "metrics http listen address").Default(":8080").String()
+	probeAddr            = kingpin.Arg("health-probe-bind-address", "http listen address for liveness check and readyness check").Default(":8081").String()
+	enableLeaderElection = kingpin.Arg("leader-elect", "is enable multi operators leader election ，only one operator pod work if enabled leader election").Default("false").Bool()
 )
 
 func init() {
@@ -52,7 +54,7 @@ func main() {
 	})
 
 	if err != nil {
-		logrus.WithField("err", err.Error()).Fatal("无法启动manager")
+		logrus.WithField("err", err.Error()).Fatal("run operator controller manager failed")
 	}
 
 	if err = (&rediscontrollers.RedisReconciler{
@@ -63,10 +65,24 @@ func main() {
 	}
 
 	if err = (&mysqlcontrollers.MysqlReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		RestConfig: mgr.GetConfig(),
+		KubeClient: kubernetes.NewForConfigOrDie(mgr.GetConfig()),
+		Helper: &mysqlcontrollers.MysqlHelper{
+			RestConfig: mgr.GetConfig(),
+			KubeClient: kubernetes.NewForConfigOrDie(mgr.GetConfig()),
+		},
 	}).SetupWithManager(mgr); err != nil {
 		logrus.WithField("err", err.Error()).WithField("controller", "Mysql").Fatal("could not set up mysqls.rds.hakurei.cn controller with manager")
+	}
+
+	if err = (&proxysqlcontrollers.ProxySQLReconciler{
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		RestConfig: mgr.GetConfig(),
+	}).SetupWithManager(mgr); err != nil {
+		logrus.WithField("err", err.Error()).WithField("controller", "ProxySQL").Fatal("could not set up proxysqls.rds.hakurei.cn controller with manager")
 	}
 
 	//+kubebuilder:scaffold:builder

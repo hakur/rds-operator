@@ -14,6 +14,35 @@ rules:
   - create
   - patch
 - apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - post
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods/exec
+  verbs:
+  - create
+  - get
+  - post
+- apiGroups:
+  - ""
+  resources:
+  - pods/logs
+  verbs:
+  - create
+  - get
+  - list
+  - post
+- apiGroups:
   - apps
   resources:
   - deployments

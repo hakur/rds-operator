@@ -1,4 +1,4 @@
-package mysql
+package builder
 
 import (
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
@@ -10,8 +10,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type ProxySQLBuilder struct {
+	CR *rdsv1alpha1.ProxySQL
+}
+
 // buildProxySQLVolumeMounts generate pod volumeMouns
-func buildProxySQLVolumeMounts() (data []corev1.VolumeMount) {
+func (t *ProxySQLBuilder) buildProxySQLVolumeMounts() (data []corev1.VolumeMount) {
 	data = append(data, corev1.VolumeMount{MountPath: "/var/lib/proxysql", Name: "data"})
 	data = append(data, corev1.VolumeMount{MountPath: "/etc/proxysql.cnf.d", Name: "cnf"})
 	data = append(data, corev1.VolumeMount{MountPath: "/etc/localtime", Name: "localtime"})
@@ -19,7 +23,7 @@ func buildProxySQLVolumeMounts() (data []corev1.VolumeMount) {
 }
 
 // buildProxySQLVolume generate pod volumeMouns
-func buildProxySQLVolume() (data []corev1.Volume) {
+func (t *ProxySQLBuilder) buildProxySQLVolume() (data []corev1.Volume) {
 	data = append(data, corev1.Volume{
 		Name: "cnf",
 		VolumeSource: corev1.VolumeSource{
@@ -44,7 +48,7 @@ func buildProxySQLVolume() (data []corev1.Volume) {
 }
 
 // buildProxySQLEnvs generate pod environments variables
-func buildProxySQLEnvs(cr *rdsv1alpha1.Mysql) (data []corev1.EnvVar) {
+func (t *ProxySQLBuilder) buildProxySQLEnvs() (data []corev1.EnvVar) {
 	data = []corev1.EnvVar{
 		{Name: "POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "status.podIP"}}},
 		{Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.name"}}},
@@ -54,38 +58,34 @@ func buildProxySQLEnvs(cr *rdsv1alpha1.Mysql) (data []corev1.EnvVar) {
 }
 
 // buildProxySQLConfigContainer generate proxysql config render caontainer spec
-func buildProxySQLConfigContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container) {
-	secret := buildSecret(cr)
-
-	container.Image = cr.Spec.ConfigImage
-	container.ImagePullPolicy = cr.Spec.ImagePullPolicy
+func (t *ProxySQLBuilder) buildProxySQLConfigContainer() (container corev1.Container) {
+	container.Image = t.CR.Spec.ConfigImage
+	container.ImagePullPolicy = t.CR.Spec.ImagePullPolicy
 	container.Name = "config"
-	container.Env = buildProxySQLEnvs(cr)
+	container.Env = t.buildProxySQLEnvs()
 	container.Env = append(container.Env, corev1.EnvVar{Name: "BOOTSTRAP_CLUSTER", Value: "false"})
 	container.Env = append(container.Env, corev1.EnvVar{Name: "CONFIG_TYPE", Value: "proxysql"})
-	container.EnvFrom = []corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: secret.Name}}}}
-	container.VolumeMounts = buildProxySQLVolumeMounts()
+	container.VolumeMounts = t.buildProxySQLVolumeMounts()
 	return container
 }
 
 // buildProxySQLContainer generate proxysql container spec
-func buildProxySQLContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container) {
-	secret := buildSecret(cr)
+func (t *ProxySQLBuilder) buildProxySQLContainer() (container corev1.Container) {
 
-	container.Image = cr.Spec.ProxySQL.Image
-	container.ImagePullPolicy = cr.Spec.ImagePullPolicy
+	container.Image = t.CR.Spec.Image
+	container.ImagePullPolicy = t.CR.Spec.ImagePullPolicy
 	container.Name = "proxysql"
-	container.Env = buildProxySQLEnvs(cr)
-	container.VolumeMounts = buildProxySQLVolumeMounts()
-	container.EnvFrom = []corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: secret.Name}}}}
-	container.Resources = cr.Spec.ProxySQL.Resources
-	container.LivenessProbe = cr.Spec.ProxySQL.LivenessProbe
-	container.ReadinessProbe = cr.Spec.ProxySQL.ReadinessProbe
+	container.Env = t.buildProxySQLEnvs()
+	container.VolumeMounts = t.buildProxySQLVolumeMounts()
+
+	container.Resources = t.CR.Spec.Resources
+	container.LivenessProbe = t.CR.Spec.LivenessProbe
+	container.ReadinessProbe = t.CR.Spec.ReadinessProbe
 	return container
 }
 
-// buildProxySQLSts generate proxysql statefulset spec
-func buildProxySQLSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet, err error) {
+// BuildSts generate proxysql statefulset spec
+func (t *ProxySQLBuilder) BuildSts() (sts *appsv1.StatefulSet, err error) {
 	var spec appsv1.StatefulSetSpec
 	var podTemplateSpec corev1.PodTemplateSpec
 	var dataVolumeClaim corev1.PersistentVolumeClaim
@@ -94,9 +94,9 @@ func buildProxySQLSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet, err error
 	sts = new(appsv1.StatefulSet)
 
 	sts.ObjectMeta = metav1.ObjectMeta{
-		Name:      cr.Name + "-proxysql",
-		Namespace: cr.Namespace,
-		Labels:    buildProxySQLLabels(cr),
+		Name:      t.CR.Name + "-proxysql",
+		Namespace: t.CR.Namespace,
+		Labels:    BuildProxySQLLabels(t.CR),
 	}
 
 	sts.TypeMeta = metav1.TypeMeta{
@@ -104,27 +104,27 @@ func buildProxySQLSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet, err error
 		APIVersion: "apps/v1",
 	}
 
-	spec.Replicas = cr.Spec.ProxySQL.Replicas
-	spec.ServiceName = cr.Name
-	spec.Selector = &metav1.LabelSelector{MatchLabels: buildProxySQLLabels(cr)}
+	spec.Replicas = t.CR.Spec.Replicas
+	spec.ServiceName = t.CR.Name
+	spec.Selector = &metav1.LabelSelector{MatchLabels: BuildProxySQLLabels(t.CR)}
 
-	podTemplateSpec.ObjectMeta = metav1.ObjectMeta{Labels: buildProxySQLLabels(cr)}
+	podTemplateSpec.ObjectMeta = metav1.ObjectMeta{Labels: BuildProxySQLLabels(t.CR)}
 	podTemplateSpec.Spec.ShareProcessNamespace = &shareProcessNamespace
-	podTemplateSpec.Spec.InitContainers = []corev1.Container{buildProxySQLConfigContainer(cr)}
-	podTemplateSpec.Spec.Containers = []corev1.Container{buildProxySQLContainer(cr)}
-	podTemplateSpec.Spec.PriorityClassName = cr.Spec.PriorityClassName
-	podTemplateSpec.Spec.Volumes = buildProxySQLVolume()
-	podTemplateSpec.Spec.Affinity = cr.Spec.Affinity
-	podTemplateSpec.Spec.Tolerations = cr.Spec.Tolerations
+	podTemplateSpec.Spec.InitContainers = []corev1.Container{t.buildProxySQLConfigContainer()}
+	podTemplateSpec.Spec.Containers = []corev1.Container{t.buildProxySQLContainer()}
+	podTemplateSpec.Spec.PriorityClassName = t.CR.Spec.PriorityClassName
+	podTemplateSpec.Spec.Volumes = t.buildProxySQLVolume()
+	podTemplateSpec.Spec.Affinity = t.CR.Spec.Affinity
+	podTemplateSpec.Spec.Tolerations = t.CR.Spec.Tolerations
 
-	quantity, err := resource.ParseQuantity(cr.Spec.ProxySQL.StorageSize)
+	quantity, err := resource.ParseQuantity(t.CR.Spec.StorageSize)
 	if err != nil {
 		return nil, err
 	}
 
-	dataVolumeClaim.ObjectMeta = metav1.ObjectMeta{Name: "data", Labels: reconciler.BuildCRPVCLabels(cr, cr)}
+	dataVolumeClaim.ObjectMeta = metav1.ObjectMeta{Name: "data", Labels: reconciler.BuildCRPVCLabels(t.CR, t.CR)}
 	dataVolumeClaim.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"}
-	dataVolumeClaim.Spec.StorageClassName = &cr.Spec.StorageClassName
+	dataVolumeClaim.Spec.StorageClassName = &t.CR.Spec.StorageClassName
 	dataVolumeClaim.Spec.Resources = corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: quantity}}
 
 	spec.Template = podTemplateSpec
@@ -133,15 +133,15 @@ func buildProxySQLSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet, err error
 	return sts, nil
 }
 
-// buildProxySQLService generate proxysql statefulset service
-func buildProxySQLService(cr *rdsv1alpha1.Mysql) (svc *corev1.Service) {
+// BuildService generate proxysql statefulset service
+func (t *ProxySQLBuilder) BuildService() (svc *corev1.Service) {
 	var spec corev1.ServiceSpec
 	svc = new(corev1.Service)
 
 	svc.ObjectMeta = metav1.ObjectMeta{
-		Name:      cr.Name + "-proxysql",
-		Namespace: cr.Namespace,
-		Labels:    buildProxySQLLabels(cr),
+		Name:      t.CR.Name + "-proxysql",
+		Namespace: t.CR.Namespace,
+		Labels:    BuildProxySQLLabels(t.CR),
 	}
 
 	svc.TypeMeta = metav1.TypeMeta{
@@ -149,15 +149,15 @@ func buildProxySQLService(cr *rdsv1alpha1.Mysql) (svc *corev1.Service) {
 		APIVersion: "apps/v1",
 	}
 
-	spec.Selector = buildProxySQLLabels(cr)
+	spec.Selector = BuildProxySQLLabels(t.CR)
 
 	spec.Ports = []corev1.ServicePort{
 		{Name: "proxysql", Port: 6032},
 	}
 
-	if cr.Spec.ProxySQL.NodePort != nil {
+	if t.CR.Spec.NodePort != nil {
 		spec.Ports = append(spec.Ports, corev1.ServicePort{
-			Name: "mysql", Port: 3306, NodePort: *cr.Spec.ProxySQL.NodePort,
+			Name: "mysql", Port: 3306, NodePort: *t.CR.Spec.NodePort,
 		})
 		spec.Type = corev1.ServiceTypeNodePort
 	} else {
@@ -171,7 +171,7 @@ func buildProxySQLService(cr *rdsv1alpha1.Mysql) (svc *corev1.Service) {
 }
 
 // buildProxySQLLabels generate labels from cr resource, used for pod list filter
-func buildProxySQLLabels(cr *rdsv1alpha1.Mysql) (labels map[string]string) {
+func BuildProxySQLLabels(cr *rdsv1alpha1.ProxySQL) (labels map[string]string) {
 	labels = map[string]string{
 		"app":       "proxysql",
 		"cr-name":   cr.Name,

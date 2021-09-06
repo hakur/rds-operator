@@ -1,4 +1,4 @@
-package mysql
+package builder
 
 import (
 	"strconv"
@@ -12,22 +12,55 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// buildMyCnfCM generate mysql my.cnf configmap
-func buildMyCnfCM(cr *rdsv1alpha1.Mysql) (cm *corev1.ConfigMap) {
+type MysqlBuilder struct {
+	CR *rdsv1alpha1.Mysql
+}
+
+// BuildMyCnfCM generate mysql my.cnf configmap
+func (t *MysqlBuilder) BuildMyCnfCM(cr *rdsv1alpha1.Mysql) (cm *corev1.ConfigMap) {
 	cnfDir := "/etc/my.cnf.d/"
 	cm = new(corev1.ConfigMap)
 	cm.APIVersion = "v1"
 	cm.Kind = "ConfigMap"
 	cm.Name = cr.Name + "-mycnf"
 	cm.Namespace = cr.Namespace
-	cm.Labels = buildMysqlLabels(cr)
+	cm.Labels = BuildMysqlLabels(t.CR)
 
-	if cr.Spec.Mysql.ExtraConfigDir != nil {
-		cnfDir = *cr.Spec.Mysql.ExtraConfigDir
+	if cr.Spec.ExtraConfigDir != nil {
+		cnfDir = *cr.Spec.ExtraConfigDir
 	}
 
 	cnfContent := `
+[client]
+socket=/tmp/mysql.sock
 [mysqld]
+skip-name-resolve
+socket=/tmp/mysql.sock
+secure-file-priv=/var/lib/mysql-files
+user=mysql
+symbolic-links=0
+pid-file=/var/run/mysqld/mysqld.pid
+default-storage-engine=INNODB
+character-set-server=utf8
+collation-server=utf8_general_ci
+transaction_isolation=READ-COMMITTED
+
+gtid_mode=ON
+enforce-gtid-consistency=true
+
+sync_binlog=1
+log_bin=bin.log
+binlog_format=row
+binlog_gtid_simple_recovery=1
+
+relay_log=relay.log
+relay_log_recovery=1
+relay_log_info_repository=TABLE
+master_info_repository=TABLE
+binlog_checksum=NONE
+
+slave_skip_errors=ddl_exist_errors
+
 !includedir ` + cnfDir
 	cm.Data = map[string]string{
 		"my.cnf": cnfContent,
@@ -36,17 +69,18 @@ func buildMyCnfCM(cr *rdsv1alpha1.Mysql) (cm *corev1.ConfigMap) {
 }
 
 // buildMysqlVolumeMounts generate pod volumeMouns
-func buildMysqlVolumeMounts() (data []corev1.VolumeMount) {
+func (t *MysqlBuilder) buildMysqlVolumeMounts() (data []corev1.VolumeMount) {
 	data = append(data, corev1.VolumeMount{Name: "mysql-sock", MountPath: "/var/run/mysqld"})
 	data = append(data, corev1.VolumeMount{Name: "my-cnf", MountPath: "/etc/my.cnf", SubPath: "my.cnf"})
 	data = append(data, corev1.VolumeMount{MountPath: "/etc/my.cnf.d", Name: "my-cnfd"})
 	data = append(data, corev1.VolumeMount{MountPath: "/var/lib/mysql", Name: "data"})
 	data = append(data, corev1.VolumeMount{MountPath: "/etc/localtime", Name: "localtime"})
+	data = append(data, corev1.VolumeMount{MountPath: "/scripts", Name: "scripts"})
 	return
 }
 
 // buildMysqlVolumes generate pod volumes
-func buildMysqlVolumes(cr *rdsv1alpha1.Mysql) (data []corev1.Volume) {
+func (t *MysqlBuilder) buildMysqlVolumes(cr *rdsv1alpha1.Mysql) (data []corev1.Volume) {
 	var mysqlConfigVolumeMode int32 = 0755
 
 	data = append(data, corev1.Volume{
@@ -86,11 +120,16 @@ func buildMysqlVolumes(cr *rdsv1alpha1.Mysql) (data []corev1.Volume) {
 		},
 	})
 
+	data = append(data, corev1.Volume{Name: "scripts", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{
+		LocalObjectReference: corev1.LocalObjectReference{Name: cr.Name + "-scripts"},
+		DefaultMode:          &mysqlConfigVolumeMode,
+	}}})
+
 	return
 }
 
 // buildMysqlEnvs generate pod environments variables
-func buildMysqlEnvs(cr *rdsv1alpha1.Mysql) (data []corev1.EnvVar) {
+func (t *MysqlBuilder) buildMysqlEnvs(cr *rdsv1alpha1.Mysql) (data []corev1.EnvVar) {
 	data = []corev1.EnvVar{
 		{Name: "POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "status.podIP"}}},
 		{Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.name"}}},
@@ -100,51 +139,38 @@ func buildMysqlEnvs(cr *rdsv1alpha1.Mysql) (data []corev1.EnvVar) {
 }
 
 // buildMysqlContainer generate mysql container spec
-func buildMysqlContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container) {
-	secret := buildSecret(cr)
+func (t *MysqlBuilder) buildMysqlContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container) {
+	secret := BuildSecret(cr)
 
-	container.Image = cr.Spec.Mysql.Image
+	container.Image = cr.Spec.Image
 	container.ImagePullPolicy = cr.Spec.ImagePullPolicy
 	container.Name = "mysql"
-	container.Env = buildMysqlEnvs(cr)
-	container.VolumeMounts = buildMysqlVolumeMounts()
+	container.Env = t.buildMysqlEnvs(cr)
+	container.VolumeMounts = t.buildMysqlVolumeMounts()
 	container.EnvFrom = []corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: secret.Name}}}}
-	container.Resources = cr.Spec.Mysql.Resources
-	container.LivenessProbe = cr.Spec.Mysql.LivenessProbe
-	container.ReadinessProbe = cr.Spec.Mysql.ReadinessProbe
+	container.Resources = cr.Spec.Resources
+	container.LivenessProbe = cr.Spec.LivenessProbe
+	container.ReadinessProbe = cr.Spec.ReadinessProbe
+
 	return container
 }
 
-// buildMysqlBootContainer generate mysql container spec
-func buildMysqlBootContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container) {
-	secret := buildSecret(cr)
+// buildMysqlInitContainer generate mysql config render caontainer spec
+func (t *MysqlBuilder) buildMysqlInitContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container) {
+	secret := BuildSecret(cr)
 
 	container.Image = cr.Spec.ConfigImage
 	container.ImagePullPolicy = cr.Spec.ImagePullPolicy
-	container.Name = "boot"
-	container.Env = buildMysqlEnvs(cr)
+	container.Name = "init"
+	container.Env = t.buildMysqlEnvs(cr)
 	container.EnvFrom = []corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: secret.Name}}}}
-	container.VolumeMounts = buildMysqlVolumeMounts()
-	container.Resources = cr.Spec.Mysql.Resources
-	container.Env = append(container.Env, corev1.EnvVar{Name: "BOOTSTRAP_CLUSTER", Value: "true"})
+	container.VolumeMounts = t.buildMysqlVolumeMounts()
+	container.Command = []string{"sidecar", "mysql", "cfg"}
 	return container
 }
 
-// buildMysqlConfigContainer generate mysql config render caontainer spec
-func buildMysqlConfigContainer(cr *rdsv1alpha1.Mysql) (container corev1.Container) {
-	secret := buildSecret(cr)
-
-	container.Image = cr.Spec.ConfigImage
-	container.ImagePullPolicy = cr.Spec.ImagePullPolicy
-	container.Name = "config"
-	container.Env = buildMysqlEnvs(cr)
-	container.EnvFrom = []corev1.EnvFromSource{{SecretRef: &corev1.SecretEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: secret.Name}}}}
-	container.VolumeMounts = buildMysqlVolumeMounts()
-	return container
-}
-
-// buildMysqlSts generate mysql statefulset
-func buildMysqlSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet, err error) {
+// BuildSts generate mysql statefulset
+func (t *MysqlBuilder) BuildSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet, err error) {
 	var spec appsv1.StatefulSetSpec
 	var podTemplateSpec corev1.PodTemplateSpec
 	var mysqlDataVolumeClaim corev1.PersistentVolumeClaim
@@ -155,7 +181,7 @@ func buildMysqlSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet, err error) {
 	sts.ObjectMeta = metav1.ObjectMeta{
 		Name:      cr.Name + "-mysql",
 		Namespace: cr.Namespace,
-		Labels:    buildMysqlLabels(cr),
+		Labels:    BuildMysqlLabels(t.CR),
 	}
 
 	sts.TypeMeta = metav1.TypeMeta{
@@ -163,20 +189,20 @@ func buildMysqlSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet, err error) {
 		APIVersion: "apps/v1",
 	}
 
-	spec.Replicas = cr.Spec.Mysql.Replicas
+	spec.Replicas = cr.Spec.Replicas
 	spec.ServiceName = cr.Name + "-mysql"
-	spec.Selector = &metav1.LabelSelector{MatchLabels: buildMysqlLabels(cr)}
+	spec.Selector = &metav1.LabelSelector{MatchLabels: BuildMysqlLabels(t.CR)}
 
-	podTemplateSpec.ObjectMeta = metav1.ObjectMeta{Labels: buildMysqlLabels(cr)}
-	podTemplateSpec.Spec.Volumes = buildMysqlVolumes(cr)
+	podTemplateSpec.ObjectMeta = metav1.ObjectMeta{Labels: BuildMysqlLabels(t.CR)}
+	podTemplateSpec.Spec.Volumes = t.buildMysqlVolumes(cr)
 	podTemplateSpec.Spec.ShareProcessNamespace = &shareProcessNamespace
-	podTemplateSpec.Spec.InitContainers = []corev1.Container{buildMysqlConfigContainer(cr)}
-	podTemplateSpec.Spec.Containers = []corev1.Container{buildMysqlContainer(cr), buildMysqlBootContainer(cr)}
+	podTemplateSpec.Spec.InitContainers = []corev1.Container{t.buildMysqlInitContainer(cr)}
+	podTemplateSpec.Spec.Containers = []corev1.Container{t.buildMysqlContainer(cr)}
 	podTemplateSpec.Spec.PriorityClassName = cr.Spec.PriorityClassName
 	podTemplateSpec.Spec.Affinity = cr.Spec.Affinity
 	podTemplateSpec.Spec.Tolerations = cr.Spec.Tolerations
 
-	quantity, err := resource.ParseQuantity(cr.Spec.Mysql.StorageSize)
+	quantity, err := resource.ParseQuantity(cr.Spec.StorageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -192,15 +218,15 @@ func buildMysqlSts(cr *rdsv1alpha1.Mysql) (sts *appsv1.StatefulSet, err error) {
 	return sts, nil
 }
 
-// buildMysqlService generate mysql services
-func buildMysqlService(cr *rdsv1alpha1.Mysql) (svc *corev1.Service) {
+// BuildService generate mysql services
+func (t *MysqlBuilder) BuildService(cr *rdsv1alpha1.Mysql) (svc *corev1.Service) {
 	var spec corev1.ServiceSpec
 	svc = new(corev1.Service)
 
 	svc.ObjectMeta = metav1.ObjectMeta{
 		Name:      cr.Name + "-mysql",
 		Namespace: cr.Namespace,
-		Labels:    buildMysqlLabels(cr),
+		Labels:    BuildMysqlLabels(t.CR),
 	}
 
 	svc.TypeMeta = metav1.TypeMeta{
@@ -208,7 +234,7 @@ func buildMysqlService(cr *rdsv1alpha1.Mysql) (svc *corev1.Service) {
 		APIVersion: "apps/v1",
 	}
 
-	spec.Selector = buildMysqlLabels(cr)
+	spec.Selector = BuildMysqlLabels(t.CR)
 
 	spec.Ports = []corev1.ServicePort{
 		{Name: "mysql", Port: 3306},
@@ -221,16 +247,16 @@ func buildMysqlService(cr *rdsv1alpha1.Mysql) (svc *corev1.Service) {
 	return svc
 }
 
-// buildMysqlContainerServices generate mysql services for each mysql container
-func buildMysqlContainerServices(cr *rdsv1alpha1.Mysql) (services []*corev1.Service) {
-	for i := 0; i < int(*cr.Spec.Mysql.Replicas); i++ {
+// BuildContainerServices generate mysql services for each mysql container
+func (t *MysqlBuilder) BuildContainerServices(cr *rdsv1alpha1.Mysql) (services []*corev1.Service) {
+	for i := 0; i < int(*cr.Spec.Replicas); i++ {
 		var spec corev1.ServiceSpec
 		svc := new(corev1.Service)
 
 		svc.ObjectMeta = metav1.ObjectMeta{
 			Name:      cr.Name + "-mysql-" + strconv.Itoa(i),
 			Namespace: cr.Namespace,
-			Labels:    buildMysqlLabels(cr),
+			Labels:    BuildMysqlLabels(t.CR),
 		}
 
 		svc.TypeMeta = metav1.TypeMeta{
@@ -238,7 +264,7 @@ func buildMysqlContainerServices(cr *rdsv1alpha1.Mysql) (services []*corev1.Serv
 			APIVersion: "apps/v1",
 		}
 
-		spec.Selector = buildMysqlLabels(cr)
+		spec.Selector = BuildMysqlLabels(t.CR)
 		spec.Selector["statefulset.kubernetes.io/pod-name"] = cr.Name + "-mysql-" + strconv.Itoa(i)
 
 		spec.Ports = []corev1.ServicePort{
@@ -254,8 +280,8 @@ func buildMysqlContainerServices(cr *rdsv1alpha1.Mysql) (services []*corev1.Serv
 	return services
 }
 
-// buildMysqlLabels generate labels from cr resource, used for pod list filter
-func buildMysqlLabels(cr *rdsv1alpha1.Mysql) (labels map[string]string) {
+// BuildMysqlLabels generate labels from cr resource, used for pod list filter
+func BuildMysqlLabels(cr *rdsv1alpha1.Mysql) (labels map[string]string) {
 	labels = map[string]string{
 		"app":       "mysql",
 		"cr-name":   cr.Name,

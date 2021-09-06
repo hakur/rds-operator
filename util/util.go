@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -58,4 +59,12 @@ func DelArryElement(slice []string, s string) (result []string) {
 		result = append(result, item)
 	}
 	return
+}
+
+func EnvOrDefault(envName, defaultValue string) string {
+	val := os.Getenv(envName)
+	if val == "" {
+		val = defaultValue
+	}
+	return val
 }

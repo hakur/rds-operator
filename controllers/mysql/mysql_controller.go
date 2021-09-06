@@ -2,23 +2,37 @@ package mysql
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
+	"github.com/hakur/rds-operator/controllers/mysql/builder"
 	"github.com/hakur/rds-operator/pkg/reconciler"
+	"github.com/hakur/rds-operator/pkg/types"
 	"github.com/hakur/rds-operator/util"
+)
+
+const (
+	// mysqlFinalizer mysql CR delete mark
+	mysqlFinalizer = "mysql.rds.hakurei.cn/v1alpha1"
 )
 
 // MysqlReconciler reconciles a Mysql object
 type MysqlReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme     *runtime.Scheme
+	RestConfig *rest.Config
+	KubeClient *kubernetes.Clientset
+	Helper     *MysqlHelper
 }
 
 //+kubebuilder:rbac:groups=rds.hakurei.cn,resources=mysqls,verbs=get;list;watch;create;update;patch;delete
@@ -27,7 +41,9 @@ type MysqlReconciler struct {
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=v1,resources=service,verbs=get;list;watch;create;update;delete
-//+kubebuilder:rbac:groups=v1,resources=pod,verbs=get;list;watch;create;update;delete
+//+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;delete;post
+//+kubebuilder:rbac:groups="",resources=pods/logs,verbs=get;post;create;list
+//+kubebuilder:rbac:groups="",resources=pods/exec,verbs=get;post;create
 //+kubebuilder:rbac:groups=v1,resources=configMap,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=v1,resources=secret,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
@@ -40,7 +56,7 @@ type MysqlReconciler struct {
 // the user.
 //
 // For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.8.3/pkg/reconcile
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.6/pkg/reconcile
 func (t *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r ctrl.Result, err error) {
 	cr := &rdsv1alpha1.Mysql{}
 
@@ -52,6 +68,20 @@ func (t *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r ct
 		return r, client.IgnoreNotFound(err)
 	}
 
+	// check for cluster status
+	if err = t.checkClusterStatus(ctx, cr); err != nil {
+		if errors.Is(err, types.ErrPodNotRunning) || errors.Is(err, types.ErrMasterNoutFound) || errors.Is(err, types.ErrContainerNotFound) {
+			r.Requeue = true
+			r.RequeueAfter = time.Second * 3
+			return r, nil
+		}
+		return r, err
+	}
+
+	if err = t.Status().Update(ctx, cr); err != nil {
+		return r, fmt.Errorf("status update failed -> %w", err)
+	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -59,7 +89,7 @@ func (t *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r ct
 func (t *MysqlReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&rdsv1alpha1.Mysql{}).
-		Owns(&corev1.Service{}).Owns(&appsv1.StatefulSet{}).Owns(&corev1.ConfigMap{}).Owns(&corev1.Secret{}).
+		Owns(&corev1.Service{}).Owns(&appsv1.StatefulSet{}).Owns(&corev1.ConfigMap{}).Owns(&corev1.Secret{}).Owns(&corev1.Pod{}).
 		Complete(t)
 }
 
@@ -95,37 +125,7 @@ func (t *MysqlReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Mysql) (err
 		return err
 	}
 
-	if cr.Spec.ProxySQL != nil {
-		if err = t.applyProxySQL(ctx, cr); err != nil {
-			return err
-		}
-	}
-
 	if err = reconciler.RemovePVCRetentionMark(t.Client, ctx, cr.Namespace, reconciler.BuildCRPVCLabels(cr, cr)); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// applyProxySQL create or update proxySQL resources
-func (t *MysqlReconciler) applyProxySQL(ctx context.Context, cr *rdsv1alpha1.Mysql) (err error) {
-	secret := buildSecret(cr)
-	service := buildProxySQLService(cr)
-	statefulset, err := buildProxySQLSts(cr)
-	if err != nil {
-		return err
-	}
-
-	if err := reconciler.ApplyService(t.Client, ctx, service, cr, t.Scheme); err != nil {
-		return err
-	}
-
-	if err := reconciler.ApplySecret(t.Client, ctx, secret, cr, t.Scheme); err != nil {
-		return err
-	}
-
-	if err := reconciler.ApplyStatefulSet(t.Client, ctx, statefulset, cr, t.Scheme); err != nil {
 		return err
 	}
 
@@ -134,14 +134,25 @@ func (t *MysqlReconciler) applyProxySQL(ctx context.Context, cr *rdsv1alpha1.Mys
 
 // applyMysql create or update mysql resources
 func (t *MysqlReconciler) applyMysql(ctx context.Context, cr *rdsv1alpha1.Mysql) (err error) {
-	statefulset, err := buildMysqlSts(cr)
+	mysqlBuilder := builder.MysqlBuilder{CR: cr}
+	statefulset, err := mysqlBuilder.BuildSts(cr)
 	if err != nil {
 		return err
 	}
-	service := buildMysqlService(cr)
-	containerServices := buildMysqlContainerServices(cr)
-	configMap := buildMyCnfCM(cr)
-	secret := buildSecret(cr)
+
+	service := mysqlBuilder.BuildService(cr)
+	containerServices := mysqlBuilder.BuildContainerServices(cr)
+	cnfConfigMap := mysqlBuilder.BuildMyCnfCM(cr)
+	scriptsConfigMap, err := util.BuildScriptsCM(cr.Namespace, cr.Name+"-scripts", builder.BuildMysqlLabels(cr), []string{
+		"util.sh",
+		"mysql/mysql-cluster.sh",
+		"mysql/mysql.sh",
+	})
+	if err != nil {
+		return err
+	}
+
+	secret := builder.BuildSecret(cr)
 
 	if err = reconciler.ApplySecret(t.Client, ctx, secret, cr, t.Scheme); err != nil {
 		return err
@@ -153,7 +164,11 @@ func (t *MysqlReconciler) applyMysql(ctx context.Context, cr *rdsv1alpha1.Mysql)
 		}
 	}
 
-	if err = reconciler.ApplyConfigMap(t.Client, ctx, configMap, cr, t.Scheme); err != nil {
+	if err = reconciler.ApplyConfigMap(t.Client, ctx, cnfConfigMap, cr, t.Scheme); err != nil {
+		return err
+	}
+
+	if err = reconciler.ApplyConfigMap(t.Client, ctx, scriptsConfigMap, cr, t.Scheme); err != nil {
 		return err
 	}
 
@@ -172,7 +187,7 @@ func (t *MysqlReconciler) applyMysql(ctx context.Context, cr *rdsv1alpha1.Mysql)
 func (t *MysqlReconciler) clean(ctx context.Context, cr *rdsv1alpha1.Mysql) (err error) {
 	// clean mysql sub resources
 	var mysqlStatefulSets appsv1.StatefulSetList
-	if err = t.List(ctx, &mysqlStatefulSets, client.InNamespace(cr.Namespace), client.MatchingLabels(buildMysqlLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+	if err = t.List(ctx, &mysqlStatefulSets, client.InNamespace(cr.Namespace), client.MatchingLabels(builder.BuildMysqlLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
 		for _, v := range mysqlStatefulSets.Items {
 			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
 				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
@@ -183,31 +198,8 @@ func (t *MysqlReconciler) clean(ctx context.Context, cr *rdsv1alpha1.Mysql) (err
 	}
 
 	var mysqlServices corev1.ServiceList
-	if err = t.List(ctx, &mysqlServices, client.InNamespace(cr.Namespace), client.MatchingLabels(buildMysqlLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+	if err = t.List(ctx, &mysqlServices, client.InNamespace(cr.Namespace), client.MatchingLabels(builder.BuildMysqlLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
 		for _, v := range mysqlServices.Items {
-			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
-				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
-			}
-		}
-	} else {
-		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
-	}
-
-	// clean proxysql sub resources
-	var proxySQLStatefulSets appsv1.StatefulSetList
-	if err = t.List(ctx, &proxySQLStatefulSets, client.InNamespace(cr.Namespace), client.MatchingLabels(buildProxySQLLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
-		for _, v := range proxySQLStatefulSets.Items {
-			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
-				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
-			}
-		}
-	} else {
-		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
-	}
-
-	var proxyServices corev1.ServiceList
-	if err = t.List(ctx, &proxyServices, client.InNamespace(cr.Namespace), client.MatchingLabels(buildProxySQLLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
-		for _, v := range proxyServices.Items {
 			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
 				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
 			}
@@ -218,7 +210,7 @@ func (t *MysqlReconciler) clean(ctx context.Context, cr *rdsv1alpha1.Mysql) (err
 
 	// clean common sub resources
 	var configMaps corev1.ConfigMapList
-	if err = t.List(ctx, &configMaps, client.InNamespace(cr.Namespace), client.MatchingLabels(buildMysqlLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+	if err = t.List(ctx, &configMaps, client.InNamespace(cr.Namespace), client.MatchingLabels(builder.BuildMysqlLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
 		for _, v := range configMaps.Items {
 			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
 				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
@@ -229,7 +221,7 @@ func (t *MysqlReconciler) clean(ctx context.Context, cr *rdsv1alpha1.Mysql) (err
 	}
 
 	var secrets corev1.SecretList
-	if err = t.List(ctx, &secrets, client.InNamespace(cr.Namespace), client.MatchingLabels(buildMysqlLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+	if err = t.List(ctx, &secrets, client.InNamespace(cr.Namespace), client.MatchingLabels(builder.BuildMysqlLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
 		for _, v := range secrets.Items {
 			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
 				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())

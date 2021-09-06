@@ -68,6 +68,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Apis().V1alpha1().Kafkas().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("mysqls"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Apis().V1alpha1().Mysqls().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("mysqlbackups"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Apis().V1alpha1().MysqlBackups().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("proxysqls"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Apis().V1alpha1().ProxySQLs().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("redises"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Apis().V1alpha1().Redises().Informer()}, nil
 
