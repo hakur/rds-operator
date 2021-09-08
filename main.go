@@ -16,6 +16,7 @@ import (
 	"github.com/bombsimon/logrusr"
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
 	mysqlcontrollers "github.com/hakur/rds-operator/controllers/mysql"
+	mysqlbackups "github.com/hakur/rds-operator/controllers/mysql_backup"
 	proxysqlcontrollers "github.com/hakur/rds-operator/controllers/proxysql"
 	rediscontrollers "github.com/hakur/rds-operator/controllers/redis"
 	"github.com/sirupsen/logrus"
@@ -83,6 +84,14 @@ func main() {
 		RestConfig: mgr.GetConfig(),
 	}).SetupWithManager(mgr); err != nil {
 		logrus.WithField("err", err.Error()).WithField("controller", "ProxySQL").Fatal("could not set up proxysqls.rds.hakurei.cn controller with manager")
+	}
+
+	if err = (&mysqlbackups.MysqlBackupReconciler{
+		Client:     mgr.GetClient(),
+		Scheme:     mgr.GetScheme(),
+		RestConfig: mgr.GetConfig(),
+	}).SetupWithManager(mgr); err != nil {
+		logrus.WithField("err", err.Error()).WithField("controller", " MysqlBackup").Fatal("could not set up mysqlbackups.rds.hakurei.cn controller with manager")
 	}
 
 	//+kubebuilder:scaffold:builder

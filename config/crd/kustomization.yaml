@@ -5,6 +5,7 @@ resources:
 - bases/rds.hakurei.cn_kafkas.yaml
 - bases/rds.hakurei.cn_redis.yaml
 - bases/rds.hakurei.cn_mysqls.yaml
+- bases/rds.hakurei.cn_mysqlbackups.yaml
 - bases/rds.hakurei.cn_proxysqls.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 

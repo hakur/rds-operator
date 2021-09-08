@@ -67,6 +67,32 @@ rules:
 - apiGroups:
   - rds.hakurei.cn
   resources:
+  - mysqlbackups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rds.hakurei.cn
+  resources:
+  - mysqlbackups/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - rds.hakurei.cn
+  resources:
+  - mysqlbackups/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - rds.hakurei.cn
+  resources:
   - mysqls
   verbs:
   - create
@@ -86,6 +112,32 @@ rules:
   - rds.hakurei.cn
   resources:
   - mysqls/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - rds.hakurei.cn
+  resources:
+  - proxysqls
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rds.hakurei.cn
+  resources:
+  - proxysqls/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - rds.hakurei.cn
+  resources:
+  - proxysqls/status
   verbs:
   - get
   - patch

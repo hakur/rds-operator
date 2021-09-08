@@ -8,13 +8,14 @@ import (
 
 	"github.com/hakur/rds-operator/pkg/types"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// ApplyService apply service and set parent gc
+// ApplyService apply service
 func ApplyService(c client.Client, ctx context.Context, data *corev1.Service, parentObject metav1.Object, scheme *runtime.Scheme) (err error) {
 	var oldData corev1.Service
 	if err := c.Get(ctx, client.ObjectKeyFromObject(data), &oldData); err != nil {
@@ -38,7 +39,7 @@ func ApplyService(c client.Client, ctx context.Context, data *corev1.Service, pa
 	return nil
 }
 
-// ApplySecret apply secret and set parent gc
+// ApplySecret apply secret
 func ApplySecret(c client.Client, ctx context.Context, data *corev1.Secret, parentObject metav1.Object, scheme *runtime.Scheme) (err error) {
 	var oldData corev1.Secret
 	if err := c.Get(ctx, client.ObjectKeyFromObject(data), &oldData); err != nil {
@@ -60,7 +61,7 @@ func ApplySecret(c client.Client, ctx context.Context, data *corev1.Secret, pare
 	return nil
 }
 
-// ApplyStatefulSet  apply statefulset and set parent gc
+// ApplyStatefulSet  apply statefulset
 func ApplyStatefulSet(c client.Client, ctx context.Context, data *appsv1.StatefulSet, parentObject metav1.Object, scheme *runtime.Scheme) (err error) {
 	var oldData appsv1.StatefulSet
 	if err := c.Get(ctx, client.ObjectKeyFromObject(data), &oldData); err != nil {
@@ -82,7 +83,7 @@ func ApplyStatefulSet(c client.Client, ctx context.Context, data *appsv1.Statefu
 	return nil
 }
 
-// ApplyConfigMap apply statefulset and set parent gc
+// ApplyConfigMap apply statefulset
 func ApplyConfigMap(c client.Client, ctx context.Context, data *corev1.ConfigMap, parentObject metav1.Object, scheme *runtime.Scheme) (err error) {
 	var oldData corev1.ConfigMap
 	if err := c.Get(ctx, client.ObjectKeyFromObject(data), &oldData); err != nil {
@@ -116,6 +117,28 @@ func ApplyDeployment(c client.Client, ctx context.Context, data *appsv1.Deployme
 		}
 	} else {
 		// if deployment exists, update it
+		if err := c.Update(ctx, data); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ApplyCronJob apply conjob
+func ApplyCronJob(c client.Client, ctx context.Context, data *batchv1.CronJob, parentObject metav1.Object, scheme *runtime.Scheme) (err error) {
+	var oldData batchv1.CronJob
+	if err := c.Get(ctx, client.ObjectKeyFromObject(data), &oldData); err != nil {
+		if err := client.IgnoreNotFound(err); err == nil {
+			// if cronjob not exist, create it
+			if err := c.Create(ctx, data); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	} else {
+		// if cronjob exists, update it
 		if err := c.Update(ctx, data); err != nil {
 			return err
 		}

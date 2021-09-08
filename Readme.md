@@ -2,18 +2,18 @@
 * mysql.rds.hakurei.cn/v1alpha1
     * mysql version
         - [ ] 5.7.34
-            - [x] MGR single primary (WIP)
+            - [x] MGR single primary
             - [ ] MGR multi primary
             - [ ] Semi sync replication
         - [ ] 8.0
-            - [ ] MGR single primary (WIP)
+            - [ ] MGR single primary
             - [ ] MGR multi primary
             - [ ] Semi sync replication
 
 * redis.rds.hakurei.cn/v1alpha1
     * redis version
         - [x] 6.2.5
-            - [x] redis cluster
+            - [x] redis cluster with predixy
             
 
     * mongo.rds.hakurei.cn/v1alpha1 (in plan)

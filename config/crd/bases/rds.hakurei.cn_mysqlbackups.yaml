@@ -36,7 +36,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: MysqlSpec defines the desired state of Mysql
+            description: MysqlBackupSpec defines the desired state of Mysql
             properties:
               affinity:
                 description: If specified, the pod's scheduling constraints
@@ -863,27 +863,35 @@ spec:
                         type: array
                     type: object
                 type: object
-              backupPolicy:
-                description: BackupPolicy mysql data backup methos , values are [
-                  BackupDataDir ]
-                type: string
+              args:
+                description: Command Kafka container command args
+                items:
+                  type: string
+                type: array
               clusterMode:
-                description: ClusterMode mysql cluster mode,values are [ MGRMP MGRSP
-                  SemiSync Async ]
+                description: ClusterMode mysql cluster mode type
                 type: string
-              configImage:
-                description: ConfigImage mysql initContainer for render mysql/proxysql
-                  config and boostrap mysql cluster
-                type: string
-              extraConfigDir:
-                description: ExtraConfigDir my.cnf include dir
-                type: string
+              command:
+                description: Command Kafka container command
+                items:
+                  type: string
+                type: array
               image:
-                description: Image mysql image
+                description: Image main container image
                 type: string
               imagePullPolicy:
                 description: ImagePullPolicy all pods image pull policy，value should
                   keep with corev1.PullPolicy
+                type: string
+              initContainerArgs:
+                items:
+                  type: string
+                type: array
+              initContainerCommand:
+                items:
+                  type: string
+                type: array
+              initContainerImage:
                 type: string
               livenessProbe:
                 description: 'Periodic probe of container liveness. Container will
@@ -1012,22 +1020,41 @@ spec:
                     format: int32
                     type: integer
                 type: object
-              maxConn:
-                type: integer
-              mgrsp:
-                description: MGRSP mysql multi group replication single primary mode
-                  options
+              mysql:
+                items:
+                  description: MysqlHost mysql back server connection settings
+                  properties:
+                    host:
+                      type: string
+                    port:
+                      type: integer
+                  required:
+                  - host
+                  - port
+                  type: object
+                type: array
+              password:
+                description: Password password of all mysql hosts
+                type: string
+              pod:
+                description: Pod pod settings
                 properties:
-                  applierThreshold:
-                    description: 'ApplierThreshold mysql mgr variable: loose-group_replication_flow_control_applier_threshold'
-                    type: integer
-                  mgrRetries:
-                    description: 'MGRRtries mysql mgr variable: loose-group_replication_recovery_retry_count'
-                    type: integer
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  labels:
+                    additionalProperties:
+                      type: string
+                    type: object
                 type: object
               priorityClassName:
                 description: PriorityClassName pod priority class name for all pods
                   under CR resource
+                type: string
+              pvcName:
+                description: PVCName if pvc name is empty, a emptydir will be used
+                  as tmp storage for mysql backup files
                 type: string
               pvcRetentionSeconds:
                 description: PVCRetentionSeconds pvc retention seconds after CR has
@@ -1167,11 +1194,6 @@ spec:
                     format: int32
                     type: integer
                 type: object
-              replicas:
-                description: Replicas mysql cluster pod total count,contains master
-                  and slave
-                format: int32
-                type: integer
               resources:
                 description: 'Compute Resources required by this container. Cannot
                   be updated. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
@@ -1199,30 +1221,40 @@ spec:
                       to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                     type: object
                 type: object
-              rootPassword:
-                description: RootPassword mysql root password, if empty, an will allow
-                  empty password login
-                type: string
-              semiSync:
-                description: SemiSync mysql semi sync replication options
+              s3:
+                description: S3 use aws s3 object storage service for store backup
+                  files
                 properties:
-                  doubleMaster:
-                    description: DoubleMaster if true , mysql-0 and mysql-1 will be
-                      cluster masters,they copy data from each other
-                    type: boolean
+                  accessKey:
+                    type: string
+                  bucket:
+                    type: string
+                  endpoint:
+                    type: string
+                  path:
+                    type: string
+                  securityKey:
+                    type: string
+                required:
+                - accessKey
+                - bucket
+                - endpoint
+                - path
+                - securityKey
                 type: object
+              schedule:
+                description: Schedule k8s/linux cronjob schedule
+                type: string
               serviceAccountName:
                 description: 'ServiceAccountName is the name of the ServiceAccount
                   to use to run this pod. More info: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/'
                 type: string
-              storageClassName:
-                description: StorageClassName all pods storage class name
-                type: string
               storageSize:
-                description: StorageSize pvc disk size
+                description: StorageSize mysql backup files tmp storage dir max size
                 type: string
               timeZone:
-                description: TimeZone timezone string , for example Asia/Shanghai
+                description: StorageClassName all pods storage class name TimeZone
+                  timezone string , for example Asia/Shanghai
                 type: string
               tolerations:
                 description: Tolerations all pods tolerations，should keep with corev1.Toleration
@@ -1264,71 +1296,29 @@ spec:
                       type: string
                   type: object
                 type: array
-              users:
-                description: MysqlUsers a list of users will be created when initialize
-                  cluster
-                items:
-                  description: MysqlUser mysql user settings
-                  properties:
-                    databaseTarget:
-                      description: 'DatabaseTarget which database or tables will granted
-                        privileges to this user. for example : grant all privileges
-                        on *.* to user xxx@''%'' indentified by ''xxxxx'', in this
-                        case, DatabaseTarget value should be ''*.*'''
-                      type: string
-                    domain:
-                      description: 'Domain user login domain , for example : ''%'''
-                      type: string
-                    password:
-                      description: Password mysql login password of this user
-                      type: string
-                    privileges:
-                      description: 'Privileges mysql grant sql privileges, for example
-                        : []stirng{ "SELECT" ,"REPLICATION CLIENT"} or []string{"ALL
-                        PRIVILEGES"}'
-                      items:
-                        type: string
-                      type: array
-                    username:
-                      description: Username mysql login account name
-                      type: string
-                  required:
-                  - databaseTarget
-                  - domain
-                  - password
-                  - privileges
-                  - username
-                  type: object
-                type: array
-              whitelist:
-                description: Whitelist most of time it's kuberenetes pod CIDR and
-                  service CIDR, for example []string{"10.24.0.0/16","10.25.0.0/16"}
-                items:
-                  type: string
-                type: array
+              useZlibCompress:
+                type: boolean
+              username:
+                description: Username username of all mysql hosts
+                type: string
             required:
             - clusterMode
-            - configImage
             - image
-            - storageClassName
+            - initContainerArgs
+            - initContainerCommand
+            - initContainerImage
+            - password
+            - schedule
             - storageSize
             - timeZone
-            - whitelist
+            - username
             type: object
           status:
-            description: MysqlStatus defines the observed state of Mysql
+            description: MysqlBackupStatus defines the observed state of Mysql
             properties:
-              masters:
-                description: Masters current mysql cluster masters
-                items:
-                  type: string
-                type: array
-              members:
-                items:
-                  type: string
-                type: array
+              lastErrMsg:
+                type: string
               phase:
-                description: ClusterPhase mysql cluster status
                 type: string
             type: object
         type: object

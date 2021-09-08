@@ -3,6 +3,9 @@ kind: ProxySQL
 metadata:
   name: yuxing
 spec:
+  configImage: rumia/rds-sidecar
+  storageClassName: hostpath
+  timeZone: Asia/Shanghai
   image: rumia/proxysql:2.2.0
   mysqlVersion: "5.7.34"
   monitorUser: "monitor"

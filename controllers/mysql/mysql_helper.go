@@ -25,7 +25,7 @@ type MysqlHelper struct {
 }
 
 func (t *MysqlHelper) FindMaster(podNamespace, podName string) (masterHost string, err error) {
-	result, err, _ := util.ExecPodOnce(util.ExecPodOnceOpts{
+	result, err := util.ExecPodOnce(util.ExecPodOnceOpts{
 		RestConfig:    t.RestConfig,
 		KubeClient:    t.KubeClient,
 		ContainerName: "mysql",
@@ -55,14 +55,14 @@ func (t *MysqlHelper) FindMaster(podNamespace, podName string) (masterHost strin
 
 func (t *MysqlHelper) StartCluster(namespace string, pods []string) (err error) {
 	for _, pod := range pods {
-		_, err, _ = util.ExecPodOnce(util.ExecPodOnceOpts{
+		_, err := util.ExecPodOnce(util.ExecPodOnceOpts{
 			RestConfig:    t.RestConfig,
 			KubeClient:    t.KubeClient,
 			ContainerName: "mysql",
 			Command:       []string{"bash"},
 			PodName:       pod,
 			Namespace:     namespace,
-			Timeout:       time.Second * 5,
+			Timeout:       time.Second * 3,
 			Args: []string{
 				`
 				#!/bin/bash

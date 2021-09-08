@@ -19,10 +19,10 @@ function StartMGRSPCluster() {
 
 function findMasterServerMGRSP() {
     for server in $MYSQL_NODES;do
-        mysqladmin -u$MYSQL_USER -p${MYSQL_PASSWORD} -P$MYSQL_PORT -h$server ping > /dev/null 2>/dev/null
+        mysqladmin -u$MYSQL_USER  -P$MYSQL_PORT -h$server ping 2>/dev/null > /dev/null 
         if [ $? == 0 ] ;then
-            local serverUUID=$(mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -P$MYSQL_PORT -h$server -N -se "show variables like 'server_uuid';" 2>/dev/null | awk '{print $2}')
-            local primaryServerUUID=$(mysql -u$MYSQL_USER -p$MYSQL_PASSWORD -P$MYSQL_PORT -h$server -N -se "SELECT VARIABLE_VALUE FROM performance_schema.global_status WHERE VARIABLE_NAME= 'group_replication_primary_member' AND VARIABLE_VALUE='${serverUUID}';" 2>/dev/null )
+            local serverUUID=$(mysql -u$MYSQL_USER  -P$MYSQL_PORT -h$server -N -se "show variables like 'server_uuid';"  | awk '{print $2}')
+            local primaryServerUUID=$(mysql -u$MYSQL_USER  -P$MYSQL_PORT -h$server -N -se "SELECT VARIABLE_VALUE FROM performance_schema.global_status WHERE VARIABLE_NAME= 'group_replication_primary_member' AND VARIABLE_VALUE='${serverUUID}';"  )
             if [[ "$primaryServerUUID" == "$serverUUID" ]] && [[ "$serverUUID" != "" ]];then
                 echo $server
                 break
@@ -33,20 +33,20 @@ function findMasterServerMGRSP() {
 
 
 function checkGroupReplicationIsRunning() {
-    mgrOn=$(mysql -u$MYSQL_USER -p${MYSQL_ROOT_PASSWORD} -N -se "select * from performance_schema.replication_applier_status;" 2>/dev/null | grep group_replication_applier | awk '{print $2}' )
+    mgrOn=$(mysql -u$MYSQL_USER  -N -se "select * from performance_schema.replication_applier_status;"  | grep group_replication_applier | awk '{print $2}' )
     echo $mgrOn
 }
 
 
 function  mysqlMGRSPJoinMembers() {
     echolog "start join ..."
-    mysql -u$MYSQL_USER -p${MYSQL_ROOT_PASSWORD} -e "CHANGE MASTER TO MASTER_USER='${MYSQL_REPL_USER}',MASTER_PASSWORD='${MYSQL_REPL_PASSWORD}' FOR CHANNEL 'group_replication_recovery';" 2>/dev/null
-    mysql -u$MYSQL_USER -p${MYSQL_ROOT_PASSWORD} -e "START group_replication;" 2>/dev/null
+    mysql -u$MYSQL_USER  -e "CHANGE MASTER TO MASTER_USER='${MYSQL_REPL_USER}',MASTER_PASSWORD='${MYSQL_REPL_PASSWORD}' FOR CHANNEL 'group_replication_recovery';" 
+    mysql -u$MYSQL_USER  -e "START group_replication;" 
 }
 
 function mysqlMGRSPBootMembers() {
     echolog "start bootstrap ..."
-    mysql -u$MYSQL_USER -p${MYSQL_ROOT_PASSWORD} -e "SET GLOBAL group_replication_bootstrap_group=ON;" 2>/dev/null
-    mysql -u$MYSQL_USER -p${MYSQL_ROOT_PASSWORD} -e "START group_replication;" 2>/dev/null
-    mysql -u$MYSQL_USER -p${MYSQL_ROOT_PASSWORD} -e "SET GLOBAL group_replication_bootstrap_group=OFF;" 2>/dev/null
+    mysql -u$MYSQL_USER  -e "SET GLOBAL group_replication_bootstrap_group=ON;" 
+    mysql -u$MYSQL_USER  -e "START group_replication;" 
+    mysql -u$MYSQL_USER  -e "SET GLOBAL group_replication_bootstrap_group=OFF;" 
 }

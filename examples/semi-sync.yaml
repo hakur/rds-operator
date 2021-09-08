@@ -6,7 +6,6 @@ spec:
   imagePullPolicy: IfNotPresent
   rootPassword: "zerocube"
   clusterMode: SemiSync
-  backupPolicy: BackupDataDir
   storageClassName: hostpath
   timeZone: Asia/Shanghai
   configImage: rumia/rds-sidecar

@@ -1,10 +1,11 @@
-package proxysql
+package mysqlbackup
 
 import (
 	"context"
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
@@ -12,26 +13,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
-	"github.com/hakur/rds-operator/controllers/proxysql/builder"
 	"github.com/hakur/rds-operator/pkg/reconciler"
 	"github.com/hakur/rds-operator/util"
 )
 
 const (
-	// Finalizer proxysql CR delete mark
-	Finalizer = "proxysql.rds.hakurei.cn/v1alpha1"
+	// Finalizer mysqlbackups CR delete mark
+	Finalizer = "mysqlbackup.rds.hakurei.cn/v1alpha1"
 )
 
-// ProxySQLReconciler reconciles a ProxySQL object
-type ProxySQLReconciler struct {
+// MysqlBackupReconciler reconciles a MysqlBackup object
+type MysqlBackupReconciler struct {
 	client.Client
 	Scheme     *runtime.Scheme
 	RestConfig *rest.Config
 }
 
-//+kubebuilder:rbac:groups=rds.hakurei.cn,resources=proxysqls,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=rds.hakurei.cn,resources=proxysqls/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=rds.hakurei.cn,resources=proxysqls/finalizers,verbs=update
+//+kubebuilder:rbac:groups=rds.hakurei.cn,resources=mysqlbackups,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=rds.hakurei.cn,resources=mysqlbackups/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=rds.hakurei.cn,resources=mysqlbackups/finalizers,verbs=update
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=v1,resources=service,verbs=get;list;watch;create;update;delete
@@ -42,8 +42,8 @@ type ProxySQLReconciler struct {
 //+kubebuilder:rbac:groups=v1,resources=secret,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
-func (t *ProxySQLReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r ctrl.Result, err error) {
-	cr := &rdsv1alpha1.ProxySQL{}
+func (t *MysqlBackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r ctrl.Result, err error) {
+	cr := &rdsv1alpha1.MysqlBackup{}
 
 	if err = t.Get(ctx, req.NamespacedName, cr); err != nil {
 		return r, client.IgnoreNotFound(err)
@@ -57,14 +57,14 @@ func (t *ProxySQLReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (t *ProxySQLReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (t *MysqlBackupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&rdsv1alpha1.ProxySQL{}).
+		For(&rdsv1alpha1.MysqlBackup{}).
 		Owns(&corev1.Service{}).Owns(&appsv1.StatefulSet{}).Owns(&corev1.ConfigMap{}).Owns(&corev1.Secret{}).
 		Complete(t)
 }
 
-func (t *ProxySQLReconciler) checkDeleteOrApply(ctx context.Context, cr *rdsv1alpha1.ProxySQL) (err error) {
+func (t *MysqlBackupReconciler) checkDeleteOrApply(ctx context.Context, cr *rdsv1alpha1.MysqlBackup) (err error) {
 	if cr.GetDeletionTimestamp().IsZero() {
 		// add finalizer mark to CR,make sure CR clean is done by controller first
 		if !util.InArray(cr.Finalizers, Finalizer) {
@@ -91,45 +91,48 @@ func (t *ProxySQLReconciler) checkDeleteOrApply(ctx context.Context, cr *rdsv1al
 	return nil
 }
 
-func (t *ProxySQLReconciler) apply(ctx context.Context, cr *rdsv1alpha1.ProxySQL) (err error) {
-	if err = t.applyProxySQL(ctx, cr); err != nil {
-		return err
-	}
+func (t *MysqlBackupReconciler) apply(ctx context.Context, cr *rdsv1alpha1.MysqlBackup) (err error) {
+	builder := CronJobBuilder{CR: cr}
 
-	if err = reconciler.RemovePVCRetentionMark(t.Client, ctx, cr.Namespace, reconciler.BuildCRPVCLabels(cr, cr)); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// applyProxySQL create or update proxySQL resources
-func (t *ProxySQLReconciler) applyProxySQL(ctx context.Context, cr *rdsv1alpha1.ProxySQL) (err error) {
-	proxysqlBuilder := builder.ProxySQLBuilder{CR: cr}
-	service := proxysqlBuilder.BuildService()
-	statefulset, err := proxysqlBuilder.BuildSts()
+	cronjob, err := builder.BuildCronJob()
 	if err != nil {
-		return err
+		return
 	}
 
-	if err := reconciler.ApplyService(t.Client, ctx, service, cr, t.Scheme); err != nil {
-		return err
+	secret := BuildSecret(cr)
+	scriptsConfigMap, err := util.BuildScriptsCM(cr.Namespace, BuildScriptsConfigMapName(cr), BuildLabels(cr), []string{
+		"util.sh",
+		"mysql/mysql.sh",
+		"mysql/mysql-backup.sh",
+		"mysql/mysql-cluster.sh",
+		"mysql/mysql-mgrsp.sh",
+		"mysql/mysql-semi-sync.sh",
+	})
+
+	if err != nil {
+		return
 	}
 
-	if err := reconciler.ApplyStatefulSet(t.Client, ctx, statefulset, cr, t.Scheme); err != nil {
-		return err
+	if err = reconciler.ApplyCronJob(t.Client, ctx, cronjob, cr, t.Scheme); err != nil {
+		return
 	}
 
-	return nil
+	if err = reconciler.ApplySecret(t.Client, ctx, secret, cr, t.Scheme); err != nil {
+		return
+	}
+
+	if err = reconciler.ApplyConfigMap(t.Client, ctx, scriptsConfigMap, cr, t.Scheme); err != nil {
+		return
+	}
+
+	return err
 }
 
 // clean unreferenced sub resources
-func (t *ProxySQLReconciler) clean(ctx context.Context, cr *rdsv1alpha1.ProxySQL) (err error) {
-
-	// clean proxysql sub resources
-	var proxySQLStatefulSets appsv1.StatefulSetList
-	if err = t.List(ctx, &proxySQLStatefulSets, client.InNamespace(cr.Namespace), client.MatchingLabels(builder.BuildProxySQLLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
-		for _, v := range proxySQLStatefulSets.Items {
+func (t *MysqlBackupReconciler) clean(ctx context.Context, cr *rdsv1alpha1.MysqlBackup) (err error) {
+	var cronjobs batchv1.CronJobList
+	if err = t.List(ctx, &cronjobs, client.InNamespace(cr.Namespace), client.MatchingLabels(BuildLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+		for _, v := range cronjobs.Items {
 			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
 				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
 			}
@@ -138,9 +141,9 @@ func (t *ProxySQLReconciler) clean(ctx context.Context, cr *rdsv1alpha1.ProxySQL
 		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
 	}
 
-	var proxyServices corev1.ServiceList
-	if err = t.List(ctx, &proxyServices, client.InNamespace(cr.Namespace), client.MatchingLabels(builder.BuildProxySQLLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
-		for _, v := range proxyServices.Items {
+	var secrets corev1.SecretList
+	if err = t.List(ctx, &secrets, client.InNamespace(cr.Namespace), client.MatchingLabels(BuildLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+		for _, v := range secrets.Items {
 			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
 				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
 			}
@@ -149,9 +152,15 @@ func (t *ProxySQLReconciler) clean(ctx context.Context, cr *rdsv1alpha1.ProxySQL
 		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
 	}
 
-	// add pvc life deadline annotaion mark
-	if err = reconciler.AddPVCRetentionMark(t.Client, ctx, cr.Namespace, reconciler.BuildCRPVCLabels(cr, cr)); err != nil {
-		return err
+	var configMaps corev1.ConfigMapList
+	if err = t.List(ctx, &configMaps, client.InNamespace(cr.Namespace), client.MatchingLabels(BuildLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+		for _, v := range configMaps.Items {
+			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
+			}
+		}
+	} else {
+		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
 	}
 
 	return nil

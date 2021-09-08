@@ -18,26 +18,9 @@ type Kafka struct {
 }
 
 type KafkaServer struct {
-	// Image Kafka server image
-	Image string `json:"image"`
+	CommonField `json:",inline"`
 	// StorageSize pvc disk size
 	StorageSize string `json:"storageSize"`
-	// Command Kafka container command
-	Command []string `json:"command,omitempty"`
-	// Command Kafka container command args
-	Args []string `json:"args,omitempty"`
-	// Periodic probe of container liveness.
-	// Container will be restarted if the probe fails.
-	// Cannot be updated.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
-	// +optional
-	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty" protobuf:"bytes,10,opt,name=livenessProbe"`
-	// Periodic probe of container service readiness.
-	// Container will be removed from service endpoints if the probe fails.
-	// Cannot be updated.
-	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
-	// +optional
-	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty" protobuf:"bytes,11,opt,name=readinessProbe"`
 }
 
 type KafkaClusterProxy struct {

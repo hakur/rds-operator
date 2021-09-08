@@ -861,12 +861,22 @@ spec:
                         type: array
                     type: object
                 type: object
+              args:
+                description: Command Kafka container command args
+                items:
+                  type: string
+                type: array
+              command:
+                description: Command Kafka container command
+                items:
+                  type: string
+                type: array
               configImage:
                 description: ConfigImage mysql initContainer for render mysql/proxysql
                   config and boostrap mysql cluster
                 type: string
               image:
-                description: Image oci image full url ,for exmaple 'docker.io/library/nginx:1.18'
+                description: Image main container image
                 type: string
               imagePullPolicy:
                 description: ImagePullPolicy all pods image pull policy，value should
@@ -1010,6 +1020,18 @@ spec:
                   nodePort
                 format: int32
                 type: integer
+              pod:
+                description: Pod pod settings
+                properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  labels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                type: object
               priorityClassName:
                 description: PriorityClassName pod priority class name for all pods
                   under CR resource
@@ -1195,7 +1217,8 @@ spec:
                 description: StorageSize pvc disk size
                 type: string
               timeZone:
-                description: TimeZone timezone string , for example Asia/Shanghai
+                description: StorageClassName all pods storage class name TimeZone
+                  timezone string , for example Asia/Shanghai
                 type: string
               tolerations:
                 description: Tolerations all pods tolerations，should keep with corev1.Toleration
