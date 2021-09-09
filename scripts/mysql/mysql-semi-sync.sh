@@ -39,7 +39,7 @@ function semiSyncJoinMaster() {
 function semiSyncBootMembers() {
     # if master module not enabled
     local masterOn=$(mysql -u$MYSQL_USER  -N -se "show variables like 'rpl_semi_sync_master_enabled';"  | awk '{print $2}')
-    if [ $masterOn != "ON" ];then
+    if [ "$masterOn" != "ON" ];then
         mysql -u$MYSQL_USER  -N -se "SET GLOBAL rpl_semi_sync_master_enabled=ON"
         mysql -u$MYSQL_USER  -N -se "SET GLOBAL super_read_only=0"
     fi
