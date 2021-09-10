@@ -1,7 +1,7 @@
 kind: Mysql
 apiVersion: rds.hakurei.cn/v1alpha1
 metadata:
-  name: yuxing
+  name: semisync
 spec:
   imagePullPolicy: IfNotPresent
   rootPassword: "zerocube"
