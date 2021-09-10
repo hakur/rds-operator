@@ -1,3 +1,6 @@
+## Warning
+current status : toy , unusable .
+
 ### crd operator contains below resources
 * mysql.rds.hakurei.cn/v1alpha1
     * mysql version
