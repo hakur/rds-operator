@@ -26,9 +26,9 @@ import (
 
 var (
 	scheme               = runtime.NewScheme()
-	metricsAddr          = kingpin.Arg("metrics-bind-address", "metrics http listen address").Default(":8080").String()
-	probeAddr            = kingpin.Arg("health-probe-bind-address", "http listen address for liveness check and readyness check").Default(":8081").String()
-	enableLeaderElection = kingpin.Arg("leader-elect", "is enable multi operators leader election ，only one operator pod work if enabled leader election").Default("false").Bool()
+	metricsAddr          = kingpin.Flag("metrics-bind-address", "metrics http listen address").Default(":8080").String()
+	probeAddr            = kingpin.Flag("health-probe-bind-address", "http listen address for liveness check and readyness check").Default(":8081").String()
+	enableLeaderElection = kingpin.Flag("leader-elect", "is enable multi operators leader election ，only one operator pod work if enabled leader election").Default("false").Bool()
 )
 
 func init() {

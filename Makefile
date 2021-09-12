@@ -1,6 +1,6 @@
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= rumia/rds-operator:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
@@ -112,3 +112,6 @@ endef
 #########################################################################################################################
 sidecar-img:
 	docker build -t rumia/rds-sidecar -f docker/sidecar/Dockerfile .
+
+# before use `make kube`, must run `make deploy`
+kube: docker-build docker-push undeploy deploy

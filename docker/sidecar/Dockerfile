@@ -5,9 +5,10 @@ COPY pkg pkg
 COPY util util
 COPY go.mod go.mod
 COPY go.sum go.sum
+RUN go mod download
+
 COPY apis apis
 ENV GOPROXY=https://goproxy.cn,direct
-RUN go mod tidy
 RUN go build -ldflags "-s -w" -o sidecar docker/sidecar/main.go
 
 FROM ubuntu:20.04
