@@ -4,6 +4,10 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+	"fmt"
+	"os"
+	"time"
+
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
@@ -19,6 +23,7 @@ import (
 	mysqlbackups "github.com/hakur/rds-operator/controllers/mysql_backup"
 	proxysqlcontrollers "github.com/hakur/rds-operator/controllers/proxysql"
 	rediscontrollers "github.com/hakur/rds-operator/controllers/redis"
+	"github.com/hakur/rds-operator/pkg/mysql"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 	//+kubebuilder:scaffold:imports
@@ -43,6 +48,28 @@ func init() {
 }
 
 func main() {
+	db, err := mysql.NewDBFromDSN(&mysql.DSN{
+		Host:     "yuxing-mysql-0.default.svc",
+		Port:     3306,
+		Username: "root",
+		Password: "zerocube",
+		DBName:   "mysql",
+	})
+	if err != nil {
+		logrus.Fatal(err.Error())
+	}
+	r, err := db.Query("select user,host from user")
+	if err != nil {
+		logrus.Fatal(err.Error())
+	}
+
+	var user, host string
+	for r.Next() {
+		r.Scan(&user, &host)
+		fmt.Println("user=", user, "host=", host)
+	}
+	time.Sleep(time.Second * 10)
+	os.Exit(0)
 	ctrl.SetLogger(logrusr.NewLogger(logrus.StandardLogger()))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{

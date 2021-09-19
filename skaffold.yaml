@@ -1,0 +1,20 @@
+apiVersion: skaffold/v2beta22
+kind: Config
+metadata:
+  name: rds-operator
+build:
+  artifacts:
+  - image: rumia/rds-operator
+    context: .
+    docker:
+      dockerfile: Dockerfile.dev
+deploy:
+  kustomize:
+    paths:
+    - config/skaffold/base
+profiles:
+- name: dev
+  deploy:
+    kustomize:
+      paths:
+      - config/skaffold/dev
