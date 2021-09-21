@@ -4,12 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -28,10 +27,7 @@ const (
 // MysqlReconciler reconciles a Mysql object
 type MysqlReconciler struct {
 	client.Client
-	Scheme     *runtime.Scheme
-	RestConfig *rest.Config
-	KubeClient *kubernetes.Clientset
-	Helper     *MysqlHelper
+	Scheme *runtime.Scheme
 }
 
 //+kubebuilder:rbac:groups=rds.hakurei.cn,resources=mysqls,verbs=get;list;watch;create;update;patch;delete
@@ -60,8 +56,11 @@ func (t *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r ct
 
 	if cr.GetDeletionTimestamp().IsZero() {
 		// check for cluster status
-		if err = t.checkClusterStatus(ctx, cr); err != nil {
+		remoteCtx, cancel := context.WithTimeout(ctx, time.Second*10)
+		defer cancel()
+		if err = t.checkClusterStatus(remoteCtx, cr); err != nil {
 			r.Requeue = true
+			r.RequeueAfter = time.Second * 2
 			if errors.Is(err, types.ErrPodNotRunning) || errors.Is(err, types.ErrMasterNoutFound) || errors.Is(err, types.ErrContainerNotFound) || errors.Is(err, types.ErrReplicasNotDesired) {
 				return r, nil
 			}
@@ -69,8 +68,14 @@ func (t *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r ct
 			return r, err
 		}
 
-		if err = t.Status().Update(ctx, cr); err != nil {
+		if err = t.Status().Update(remoteCtx, cr); err != nil {
 			return r, fmt.Errorf("status update failed -> %w", err)
+		}
+
+		if cr.Status.Phase != rdsv1alpha1.MysqlPhaseRunning {
+			r.Requeue = true
+			r.RequeueAfter = time.Second * 2
+			return r, nil
 		}
 	}
 	return ctrl.Result{}, nil
@@ -102,6 +107,8 @@ func (t *MysqlReconciler) checkDeleteOrApply(ctx context.Context, cr *rdsv1alpha
 				return err
 			}
 		}
+
+		cr.Status.Phase = rdsv1alpha1.MysqlPhaseTerminating
 		// remove finalizer mark, tell k8s I have cleaned all sub resources
 		cr.ObjectMeta.Finalizers = util.DelArryElement(cr.ObjectMeta.Finalizers, mysqlFinalizer)
 		if err := t.Update(ctx, cr); err != nil {
@@ -134,14 +141,6 @@ func (t *MysqlReconciler) applyMysql(ctx context.Context, cr *rdsv1alpha1.Mysql)
 	service := mysqlBuilder.BuildService(cr)
 	containerServices := mysqlBuilder.BuildContainerServices(cr)
 	cnfConfigMap := mysqlBuilder.BuildMyCnfCM(cr)
-	scriptsConfigMap, err := util.BuildScriptsCM(cr.Namespace, cr.Name+"-scripts", builder.BuildMysqlLabels(cr), []string{
-		"util.sh",
-		"mysql/mysql.sh",
-		"mysql/mysql-cluster.sh",
-		"mysql/mysql-mgrsp.sh",
-		"mysql/mysql-semi-sync.sh",
-		"mysql/mysql-backup.sh",
-	})
 	if err != nil {
 		return err
 	}
@@ -159,10 +158,6 @@ func (t *MysqlReconciler) applyMysql(ctx context.Context, cr *rdsv1alpha1.Mysql)
 	}
 
 	if err = reconciler.ApplyConfigMap(t.Client, ctx, cnfConfigMap, cr, t.Scheme); err != nil {
-		return err
-	}
-
-	if err = reconciler.ApplyConfigMap(t.Client, ctx, scriptsConfigMap, cr, t.Scheme); err != nil {
 		return err
 	}
 

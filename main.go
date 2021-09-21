@@ -5,7 +5,6 @@ import (
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 
-	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -20,6 +19,7 @@ import (
 	mysqlbackups "github.com/hakur/rds-operator/controllers/mysql_backup"
 	proxysqlcontrollers "github.com/hakur/rds-operator/controllers/proxysql"
 	rediscontrollers "github.com/hakur/rds-operator/controllers/redis"
+	"github.com/hakur/rds-operator/util"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 	//+kubebuilder:scaffold:imports
@@ -30,6 +30,7 @@ var (
 	metricsAddr          = kingpin.Flag("metrics-bind-address", "metrics http listen address").Default(":8080").String()
 	probeAddr            = kingpin.Flag("health-probe-bind-address", "http listen address for liveness check and readyness check").Default(":8081").String()
 	enableLeaderElection = kingpin.Flag("leader-elect", "is enable multi operators leader election ，only one operator pod work if enabled leader election").Default("false").Bool()
+	namespaceFilter      = kingpin.Flag("namespace", "namespace for crd watching,watch all namespaces if value is empty").Default(util.EnvOrDefault("NAMESPACE", "")).String()
 )
 
 func init() {
@@ -41,6 +42,7 @@ func init() {
 	customFormatter := new(logrus.TextFormatter)
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
 	logrus.SetFormatter(customFormatter)
+	logrus.SetLevel(logrus.DebugLevel)
 }
 
 func main() {
@@ -53,6 +55,7 @@ func main() {
 		HealthProbeBindAddress: *probeAddr,
 		LeaderElection:         *enableLeaderElection,
 		LeaderElectionID:       "rds.hakurei.cn",
+		Namespace:              *namespaceFilter,
 	})
 
 	if err != nil {
@@ -67,14 +70,8 @@ func main() {
 	}
 
 	if err = (&mysqlcontrollers.MysqlReconciler{
-		Client:     mgr.GetClient(),
-		Scheme:     mgr.GetScheme(),
-		RestConfig: mgr.GetConfig(),
-		KubeClient: kubernetes.NewForConfigOrDie(mgr.GetConfig()),
-		Helper: &mysqlcontrollers.MysqlHelper{
-			RestConfig: mgr.GetConfig(),
-			KubeClient: kubernetes.NewForConfigOrDie(mgr.GetConfig()),
-		},
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		logrus.WithField("err", err.Error()).WithField("controller", "Mysql").Fatal("could not set up mysqls.rds.hakurei.cn controller with manager")
 	}

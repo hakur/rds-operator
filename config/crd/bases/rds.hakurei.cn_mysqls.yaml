@@ -1346,6 +1346,10 @@ spec:
           status:
             description: MysqlStatus defines the observed state of Mysql
             properties:
+              healthyMembers:
+                items:
+                  type: string
+                type: array
               masters:
                 description: Masters current mysql cluster masters
                 items:

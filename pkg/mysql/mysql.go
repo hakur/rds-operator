@@ -1,11 +1,18 @@
 package mysql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
 	_ "github.com/go-sql-driver/mysql"
 )
+
+type ClusterManager interface {
+	StartCluster(ctx context.Context) (err error)
+	FindMaster(ctx context.Context) (masterDSN *DSN, err error)
+	HealthyMembers(ctx context.Context) (members []*DSN)
+}
 
 type DSN struct {
 	Host     string

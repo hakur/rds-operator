@@ -20,7 +20,6 @@ const (
 	// ModeAsync cluster mode is mysql traditional aysnc replication
 	ModeAsync ClusterMode = "Async"
 
-	MysqlPhaseCreating    ClusterPhase = "Creating"
 	MysqlPhaseNotReady    ClusterPhase = "NotReady"
 	MysqlPhaseRunning     ClusterPhase = "Running"
 	MysqlPhaseTerminating ClusterPhase = "Terminating"
@@ -84,9 +83,10 @@ type MysqlSpec struct {
 // MysqlStatus defines the observed state of Mysql
 type MysqlStatus struct {
 	// Masters current mysql cluster masters
-	Masters []string     `json:"masters,omitempty"`
-	Members []string     `json:"members,omitempty"`
-	Phase   ClusterPhase `json:"phase,omitempty"`
+	Masters        []string     `json:"masters,omitempty"`
+	Members        []string     `json:"members,omitempty"`
+	HealthyMembers []string     `json:"healthyMembers,omitempty"`
+	Phase          ClusterPhase `json:"phase,omitempty"`
 }
 
 //+genclient

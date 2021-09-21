@@ -75,7 +75,6 @@ func (t *MysqlBuilder) buildMysqlVolumeMounts() (data []corev1.VolumeMount) {
 	data = append(data, corev1.VolumeMount{MountPath: "/etc/my.cnf.d", Name: "my-cnfd"})
 	data = append(data, corev1.VolumeMount{MountPath: "/var/lib/mysql", Name: "data"})
 	data = append(data, corev1.VolumeMount{MountPath: "/etc/localtime", Name: "localtime"})
-	data = append(data, corev1.VolumeMount{MountPath: "/scripts", Name: "scripts"})
 	return
 }
 
@@ -119,11 +118,6 @@ func (t *MysqlBuilder) buildMysqlVolumes(cr *rdsv1alpha1.Mysql) (data []corev1.V
 			},
 		},
 	})
-
-	data = append(data, corev1.Volume{Name: "scripts", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{
-		LocalObjectReference: corev1.LocalObjectReference{Name: cr.Name + "-scripts"},
-		DefaultMode:          &mysqlConfigVolumeMode,
-	}}})
 
 	return
 }
