@@ -8,6 +8,17 @@ build:
     context: .
     docker:
       dockerfile: Dockerfile.dev
+  # - image: rumia/rds-operator
+  #   buildpacks:
+  #     builder: paketobuildpacks/builder:0.1.233-full  #gcr.io/buildpacks/builder:v1
+  #     # runImage: ubuntu:20.04
+  #     # dependencies:
+  #     trustBuilder: true
+  #     env:
+  #     - GOPROXY={{.GOPROXY}}
+  #   sync:
+  #     auto: false
+  
 deploy:
   kustomize:
     paths:

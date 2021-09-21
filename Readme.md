@@ -24,3 +24,12 @@ current status : toy , unusable .
 * mutating adminssion webhook (in plan)
 
 * prometheus operator service monitor (in plan)
+
+### develop
+use [kt-connect](https://github.com/alibaba/kt-connect) for development 
+
+wsl2:
+```
+    ktctl connect --method=sock5
+    make run
+```
