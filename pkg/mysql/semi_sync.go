@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -14,25 +15,25 @@ import (
 
 type SemiSync struct {
 	// DataSrouces mysql instance data sources
-	DataSrouces []*DSN
+	DataSrouces    []*DSN
+	DoubleMasterHA bool
 }
 
 func (t *SemiSync) StartCluster(ctx context.Context) (err error) {
-
 	select {
 	case <-ctx.Done():
 		return types.ErrCtxTimeout
 	default:
-
+		var masters []*DSN
 		var master *DSN
-		master, _ = t.FindMaster(ctx)
+		masters, _ = t.FindMaster(ctx)
 
 		for k, dsn := range t.DataSrouces { // ordinary start mysql semi sync nodes
-			if k == 0 && master == nil {
+			if k == 0 && len(masters) < 1 {
 				err = t.bootCluster(ctx, dsn)
 				master = dsn
 			} else {
-				err = t.joinMaster(ctx, dsn)
+				err = t.joinMaster(ctx, dsn, master, 1)
 			}
 
 			if err != nil && !errors.Is(err, types.ErrMysqlSemiSyncIsAlreadyRunning) {
@@ -58,10 +59,12 @@ func (t *SemiSync) bootCluster(ctx context.Context, dsn *DSN) (err error) {
 
 	defer dbConn.Close()
 
-	if on, err := t.checkSlaveON(ctx, dbConn); on {
-		return types.ErrMysqlSemiSyncIsAlreadyRunning
-	} else {
+	if on, err := t.checkSlaveON(ctx, dbConn); !on {
 		logrus.WithFields(map[string]interface{}{"err": err.Error(), "host": dsn.Host}).Debugf("mysql check semi sync is running failed")
+		_, err = dbConn.ExecContext(ctx, "SET GLOBAL rpl_semi_sync_slave_enabled=ON")
+		if err != nil {
+			return fmt.Errorf("%w, err -> %s", types.ErrMysqlStartSemiSyncClusterFailed, err.Error())
+		}
 	}
 
 	_, err = dbConn.ExecContext(ctx, "SET GLOBAL group_replication_bootstrap_group=ON")
@@ -83,7 +86,7 @@ func (t *SemiSync) bootCluster(ctx context.Context, dsn *DSN) (err error) {
 }
 
 // joinMaster make mysql instance join master node as slave
-func (t *SemiSync) joinMaster(ctx context.Context, dsn *DSN) (err error) {
+func (t *SemiSync) joinMaster(ctx context.Context, dsn *DSN, master *DSN, superReadOnly int) (err error) {
 	dbConn, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s:%d)/mysql",
 		dsn.Username,
 		dsn.Password,
@@ -96,26 +99,42 @@ func (t *SemiSync) joinMaster(ctx context.Context, dsn *DSN) (err error) {
 
 	defer dbConn.Close()
 
-	if on, err := t.checkSlaveON(ctx, dbConn); on {
-		return types.ErrMysqlSemiSyncIsAlreadyRunning
-	} else {
-		logrus.WithFields(map[string]interface{}{"err": err.Error(), "host": dsn.Host}).Debugf("mysql check semi sync is running failed")
+	if on, err := t.checkSlaveON(ctx, dbConn); !on {
+		logrus.WithFields(map[string]interface{}{"err": err.Error(), "host": dsn.Host}).Debugf("mysql check semi sync slave process is running failed")
+		_, err = dbConn.ExecContext(ctx, "SET GLOBAL rpl_semi_sync_slave_enabled=ON")
+		if err != nil {
+			return fmt.Errorf("%w, err -> %s", types.ErrMysqlStartSemiSyncClusterFailed, err.Error())
+		}
+		_, err = dbConn.ExecContext(ctx, "SET GLOBAL super_read_only="+strconv.Itoa(superReadOnly))
+		if err != nil {
+			return fmt.Errorf("%w, err -> %s", types.ErrMysqlStartSemiSyncClusterFailed, err.Error())
+		}
 	}
 
-	_, err = dbConn.ExecContext(ctx, "CHANGE MASTER TO MASTER_USER='"+dsn.Username+"' ,MASTER_PASSWORD='"+dsn.Password+"'  FOR CHANNEL 'group_replication_recovery'")
+	myMaster, err := t.getMyMaster(ctx, dbConn)
 	if err != nil {
-		return fmt.Errorf("%w, err -> %s", types.ErrMysqlStartSemiSyncClusterFailed, err.Error())
+		logrus.WithFields(map[string]interface{}{"err": err.Error(), "host": dsn.Host}).Debugf(types.ErrMysqlFindMasterFromSalveFailed.Error())
 	}
 
-	_, err = dbConn.ExecContext(ctx, "START group_replication")
-	if err != nil {
-		return fmt.Errorf("%w, err -> %s", types.ErrMysqlStartSemiSyncClusterFailed, err.Error())
+	if myMaster != master.Host {
+		_, err = dbConn.ExecContext(ctx, "STOP SLAVE")
+		if err != nil {
+			return fmt.Errorf("%w, err -> %s", types.ErrMysqlStartSemiSyncClusterFailed, err.Error())
+		}
+		_, err = dbConn.ExecContext(ctx, "CHANGE MASTER TO MASTER_HOST='"+master.Host+"',MASTER_USER='"+dsn.Username+"' ,MASTER_PASSWORD='"+dsn.Password+"',MASTER_AUTO_POSITION=1")
+		if err != nil {
+			return fmt.Errorf("%w, err -> %s", types.ErrMysqlStartSemiSyncClusterFailed, err.Error())
+		}
+		_, err = dbConn.ExecContext(ctx, "START SLAVE")
+		if err != nil {
+			return fmt.Errorf("%w, err -> %s", types.ErrMysqlStartSemiSyncClusterFailed, err.Error())
+		}
 	}
 
 	return
 }
 
-func (t *SemiSync) FindMaster(ctx context.Context) (masterDSN *DSN, err error) {
+func (t *SemiSync) FindMaster(ctx context.Context) (masters []*DSN, err error) {
 	select {
 	case <-ctx.Done():
 		return nil, types.ErrCtxTimeout
@@ -133,29 +152,58 @@ func (t *SemiSync) FindMaster(ctx context.Context) (masterDSN *DSN, err error) {
 			}
 			defer dbConn.Close()
 
-			row, err := dbConn.QueryContext(ctx, "show  variables like 'rpl_semi_sync_master_enabled'")
-			if err != nil {
-				logrus.WithFields(map[string]interface{}{"err": err.Error(), "host": dsn.Host}).Debugf("mysql query local server uuid failed")
-				continue
-			}
-
-			var masterON string
-			if row.Next() { // two colume but second colume value is needed
-				row.Scan(&masterON, &masterON)
-			}
-
-			if masterON == "ON" {
-				return dsn, nil
+			if masterON, err := t.checkMasterON(ctx, dbConn); err == nil && masterON {
+				masters = append(masters, dsn)
 			}
 		}
-
 	}
 
-	return nil, types.ErrMasterNoutFound
+	if len(masters) < 1 {
+		return masters, types.ErrMasterNoutFound
+	}
+
+	return masters, nil
+}
+
+func (t *SemiSync) getMyMaster(ctx context.Context, dbConn *sql.DB) (masterHost string, err error) {
+	result, err := dbConn.QueryContext(ctx, "show slave status 'Master_Host'")
+	if err != nil {
+		return
+	}
+
+	if result.Next() {
+		result.Scan(&masterHost, &masterHost) // two colum,but second colume is target value
+	} else {
+		err = errors.New("mysql query result scan rpl_semi_sync_slave_enabled status failed")
+	}
+
+	return
+}
+
+func (t *SemiSync) checkMasterON(ctx context.Context, dbConn *sql.DB) (on bool, err error) {
+	result, err := dbConn.QueryContext(ctx, "show variables like 'rpl_semi_sync_master_enabled'")
+	if err != nil {
+		return
+	}
+
+	var masterON string
+	if result.Next() {
+		result.Scan(&masterON)
+	} else {
+		err = errors.New("mysql query result scan rpl_semi_sync_master_enabled status failed")
+	}
+
+	if masterON == "ON" {
+		on = true
+	} else {
+		err = errors.New("mysql rpl_semi_sync_master_enabled is OFF")
+	}
+
+	return
 }
 
 func (t *SemiSync) checkSlaveON(ctx context.Context, dbConn *sql.DB) (on bool, err error) {
-	result, err := dbConn.QueryContext(ctx, "show variables like 'rpl_semi_sync_master_enabled'")
+	result, err := dbConn.QueryContext(ctx, "show variables like 'rpl_semi_sync_slave_enabled'")
 	if err != nil {
 		return
 	}
@@ -164,13 +212,13 @@ func (t *SemiSync) checkSlaveON(ctx context.Context, dbConn *sql.DB) (on bool, e
 	if result.Next() {
 		result.Scan(&slaveON)
 	} else {
-		err = errors.New("mysql query result scan rpl_semi_sync_master_enabled status failed")
+		err = errors.New("mysql query result scan rpl_semi_sync_slave_enabled status failed")
 	}
 
 	if slaveON == "ON" {
 		on = true
 	} else {
-		err = errors.New("mysql rpl_semi_sync_master_enabled is OFF")
+		err = errors.New("mysql rpl_semi_sync_slave_enabled is OFF")
 	}
 
 	return

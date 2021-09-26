@@ -18,19 +18,16 @@ type MGRSP struct {
 }
 
 func (t *MGRSP) StartCluster(ctx context.Context) (err error) {
-
 	select {
 	case <-ctx.Done():
 		return types.ErrCtxTimeout
 	default:
-
-		var master *DSN
-		master, _ = t.FindMaster(ctx)
+		var masters []*DSN
+		masters, _ = t.FindMaster(ctx)
 
 		for k, dsn := range t.DataSrouces { // ordinary start mysql group replication
-			if k == 0 && master == nil {
+			if k == 0 && len(masters) < 1 {
 				err = t.bootCluster(ctx, dsn)
-				master = dsn
 			} else {
 				err = t.joinMaster(ctx, dsn)
 			}
@@ -115,7 +112,7 @@ func (t *MGRSP) joinMaster(ctx context.Context, dsn *DSN) (err error) {
 	return
 }
 
-func (t *MGRSP) FindMaster(ctx context.Context) (masterDSN *DSN, err error) {
+func (t *MGRSP) FindMaster(ctx context.Context) (masters []*DSN, err error) {
 	select {
 	case <-ctx.Done():
 		return nil, types.ErrCtxTimeout
@@ -161,13 +158,16 @@ func (t *MGRSP) FindMaster(ctx context.Context) (masterDSN *DSN, err error) {
 			}
 
 			if masterServerUUID != "" && masterServerUUID == myServerUUID {
-				return dsn, nil
+				masters = append(masters, dsn)
 			}
 		}
 
 	}
 
-	return nil, types.ErrMasterNoutFound
+	if len(masters) < 1 {
+		return nil, types.ErrMasterNoutFound
+	}
+	return masters, nil
 }
 
 func (t *MGRSP) checkMGRIsRunning(ctx context.Context, dbConn *sql.DB) (on bool, err error) {

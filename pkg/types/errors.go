@@ -13,4 +13,5 @@ var (
 	ErrMysqlStartMGRSPClusterFailed    = errors.New("mysql start group relication cluster with single primary mode failed")
 	ErrMysqlSemiSyncIsAlreadyRunning   = errors.New("mysql group relication is already running")
 	ErrMysqlMGRIsAlreadyRunning        = errors.New("mysql group relication is already running")
+	ErrMysqlFindMasterFromSalveFailed  = errors.New("mysql try to find master from query slave instance failed")
 )

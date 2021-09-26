@@ -10,7 +10,7 @@ import (
 
 type ClusterManager interface {
 	StartCluster(ctx context.Context) (err error)
-	FindMaster(ctx context.Context) (masterDSN *DSN, err error)
+	FindMaster(ctx context.Context) (masters []*DSN, err error)
 	HealthyMembers(ctx context.Context) (members []*DSN)
 }
 
