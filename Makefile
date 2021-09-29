@@ -114,10 +114,10 @@ gen: generate manifests install
 	cd hack
 	./update-codegen.sh
 	cd ..
-	
+
 dev:
 	go build -ldflags "-s -w" -o rds-operator
-	./rds-operator
+	source hack/dev-env.sh && ./rds-operator
 
 skaffold:
 	go build -ldflags "-s -w" -o rds-operator

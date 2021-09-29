@@ -1,5 +1,4 @@
 FROM ubuntu:20.04
 COPY rds-operator /rds-operator
 RUN chmod +x /rds-operator
-COPY scripts /scripts
 CMD ["/rds-operator"]

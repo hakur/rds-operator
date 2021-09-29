@@ -31,6 +31,7 @@ var (
 	probeAddr            = kingpin.Flag("health-probe-bind-address", "http listen address for liveness check and readyness check").Default(":8081").String()
 	enableLeaderElection = kingpin.Flag("leader-elect", "is enable multi operators leader election ，only one operator pod work if enabled leader election").Default("false").Bool()
 	namespaceFilter      = kingpin.Flag("namespace", "namespace for crd watching,watch all namespaces if value is empty").Default(util.EnvOrDefault("NAMESPACE", "")).String()
+	logLevel             = kingpin.Flag("log-level", "log level this application").Default(util.EnvOrDefault("LOG_LEVEL", "info")).String()
 )
 
 func init() {
@@ -41,8 +42,12 @@ func init() {
 	kingpin.Parse()
 	customFormatter := new(logrus.TextFormatter)
 	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
+	parsedLevel, err := logrus.ParseLevel(*logLevel)
+	if err != nil {
+		logrus.Fatal("log level=[%s] is invalid", logLevel)
+	}
 	logrus.SetFormatter(customFormatter)
-	logrus.SetLevel(logrus.DebugLevel)
+	logrus.SetLevel(parsedLevel)
 }
 
 func main() {

@@ -3,6 +3,7 @@
         "**/go.sum":true,
         "**/.dockerignore":true,
         "**/bin":true,
+        "**/testbin":true,
         "**/hack":true,
         "**/informers":true,
         "**/listers":true,
@@ -14,5 +15,6 @@
         "**/rds-operator":true,
         "**/rds-operator.exe":true,
         "**/LICENSE":true,
+        "**/cover.out":true,
     }
 }

@@ -108,7 +108,6 @@ func (t *CronJobBuilder) buildInitContainer() (container corev1.Container) {
 			},
 		},
 		VolumeMounts: []corev1.VolumeMount{
-			{Name: "scripts", MountPath: "/scripts"},
 			{Name: "data", MountPath: "/data"},
 		},
 		Resources: t.CR.Spec.Resources,
@@ -131,7 +130,6 @@ func (t *CronJobBuilder) buildMainContainer() (container corev1.Container) {
 			},
 		},
 		VolumeMounts: []corev1.VolumeMount{
-			{Name: "scripts", MountPath: "/scripts"},
 			{Name: "data", MountPath: "/data"},
 		},
 		Resources: t.CR.Spec.Resources,
