@@ -114,7 +114,11 @@ gen: generate manifests install
 	cd hack
 	./update-codegen.sh
 	cd ..
+	
 dev:
 	go build -ldflags "-s -w" -o rds-operator
-	# skaffold debug --port-forward=user,services,debug  --tail
+	./rds-operator
+
+skaffold:
+	go build -ldflags "-s -w" -o rds-operator
 	skaffold dev --port-forward=user,services  --tail
