@@ -63,7 +63,8 @@ slave_skip_errors=ddl_exist_errors
 
 !includedir ` + cnfDir
 	cm.Data = map[string]string{
-		"my.cnf": cnfContent,
+		"my.cnf":       cnfContent,
+		"extra_config": t.CR.Spec.ExtraConfig,
 	}
 	return
 }

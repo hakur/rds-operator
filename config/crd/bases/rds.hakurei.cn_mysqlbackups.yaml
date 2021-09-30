@@ -869,7 +869,7 @@ spec:
                   type: string
                 type: array
               clusterMode:
-                description: ClusterMode mysql cluster mode type
+                description: ClusterMode mysql cluster mode
                 type: string
               command:
                 description: Command Kafka container command
@@ -1021,6 +1021,7 @@ spec:
                     type: integer
                 type: object
               mysql:
+                description: Mysql host for backup
                 items:
                   description: MysqlHost mysql back server connection settings
                   properties:
@@ -1034,7 +1035,8 @@ spec:
                   type: object
                 type: array
               password:
-                description: Password password of all mysql hosts
+                description: Password password of all mysql hosts, used for this backup
+                  operation
                 type: string
               pod:
                 description: Pod pod settings
@@ -1297,9 +1299,15 @@ spec:
                   type: object
                 type: array
               useZlibCompress:
+                description: UseZlibCompress use zlib compress for mysqlpump command
+                  how to extra zlib compressed mysql backup file, see ???
                 type: boolean
               username:
-                description: Username username of all mysql hosts
+                description: Username username of all mysql hosts, used for this backup
+                  operation
+                type: string
+              webhook:
+                description: Webhook send backup file info POST to webhook url
                 type: string
             required:
             - clusterMode

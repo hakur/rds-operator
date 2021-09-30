@@ -34,3 +34,5 @@ docker/sidecar/sidecar
 docker/sidecar/sidecar.exe
 
 docker/mysql-config/mysql-config
+
+release

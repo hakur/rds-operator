@@ -17,8 +17,6 @@ const (
 	ModeMGRSP ClusterMode = "MGRSP"
 	// ModeSemiSync cluster mode is  mysql semi sync
 	ModeSemiSync ClusterMode = "SemiSync"
-	// ModeAsync cluster mode is mysql traditional aysnc replication
-	ModeAsync ClusterMode = "Async"
 
 	MysqlPhaseNotReady    ClusterPhase = "NotReady"
 	MysqlPhaseRunning     ClusterPhase = "Running"
@@ -73,9 +71,12 @@ type MysqlSpec struct {
 	MGRSP *MysqlMGRSinglePrimaryOptions `json:"mgrsp,omitempty"`
 	// SemiSync mysql semi sync replication options
 	SemiSync *MysqlSemiSyncOptions `json:"semiSync,omitempty"`
+	// ExtraConfig write your own mysql config to override operator nested mysql config.
+	// content will merge into ${extraConfigDir}/my.cnf
+	ExtraConfig string `json:"extraConfig,omitempty"`
 	// ExtraConfigDir my.cnf include dir
 	ExtraConfigDir *string `json:"extraConfigDir,omitempty"`
-	// MysqlUsers a list of users will be created when initialize cluster
+	// MysqlUsers a list of users will be sync to cluster,if CR resource changed, user list will be recheck
 	Users   []MysqlUser `json:"users,omitempty"`
 	MaxConn *int        `json:"maxConn,omitempty"`
 }

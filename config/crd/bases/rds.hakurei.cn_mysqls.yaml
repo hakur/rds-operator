@@ -891,6 +891,10 @@ spec:
                 description: ConfigImage mysql initContainer for render mysql/proxysql
                   config and boostrap mysql cluster
                 type: string
+              extraConfig:
+                description: ExtraConfig write your own mysql config to override operator
+                  nested mysql config. content will merge into ${extraConfigDir}/my.cnf
+                type: string
               extraConfigDir:
                 description: ExtraConfigDir my.cnf include dir
                 type: string
@@ -1293,8 +1297,8 @@ spec:
                   type: object
                 type: array
               users:
-                description: MysqlUsers a list of users will be created when initialize
-                  cluster
+                description: MysqlUsers a list of users will be sync to cluster,if
+                  CR resource changed, user list will be recheck
                 items:
                   description: MysqlUser mysql user settings
                   properties:
