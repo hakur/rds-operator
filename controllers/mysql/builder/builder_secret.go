@@ -1,7 +1,8 @@
 package builder
 
 import (
-	"encoding/json"
+	"encoding/base64"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -9,11 +10,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// BuildSecret generate secret environment variables for mysql pods and proxysql pods
+// BuildSecret generate secret environment variables for mysql pods
 func BuildSecret(cr *rdsv1alpha1.Mysql) (secret *corev1.Secret) {
 	var seeds string
 	var semiSyncMasters string
-	var mysqlUsers string
 	var semiSyncDoubleMaster bool
 	mysqlMaxConn := "300"
 	if cr.Spec.MaxConn != nil {
@@ -28,7 +28,7 @@ func BuildSecret(cr *rdsv1alpha1.Mysql) (secret *corev1.Secret) {
 			semiSyncMasters = mysqlhost
 		}
 
-		if cr.Spec.SemiSync != nil && cr.Spec.SemiSync.DoubleMaster && i == 1 {
+		if cr.Spec.SemiSync != nil && cr.Spec.SemiSync.DoubleMasterHA && i == 1 {
 			semiSyncDoubleMaster = true
 			semiSyncMasters += mysqlhost
 		}
@@ -36,12 +36,9 @@ func BuildSecret(cr *rdsv1alpha1.Mysql) (secret *corev1.Secret) {
 	seeds = strings.Trim(seeds, " ")
 	semiSyncMasters = strings.Trim(semiSyncMasters, " ")
 
-	buf, _ := json.Marshal(cr.Spec.Users)
-	mysqlUsers = string(buf)
-
 	secret = new(corev1.Secret)
 	secret.APIVersion = "v1"
-	secret.Kind = "ConfigMap"
+	secret.Kind = "Secret"
 	secret.Name = cr.Name + "-mysql-secret"
 	secret.Namespace = cr.Namespace
 	secret.Labels = BuildMysqlLabels(cr)
@@ -50,19 +47,35 @@ func BuildSecret(cr *rdsv1alpha1.Mysql) (secret *corev1.Secret) {
 		"TZ":                   []byte(cr.Spec.TimeZone),
 		"MYSQL_ROOT_PASSWORD":  []byte(*cr.Spec.RootPassword),
 		"MYSQL_DATA_DIR":       []byte("/var/lib/mysql"),
-		"MYSQL_BOOT_USERS":     []byte(mysqlUsers),
 		"MYSQL_CLUSTER_MODE":   []byte(string(cr.Spec.ClusterMode)),
 		"MYSQL_CFG_MAX_CONN":   []byte(mysqlMaxConn),
 		"MYSQL_CFG_WHITE_LIST": []byte(strings.Join(cr.Spec.Whitelist, ",")),
 		"MYSQL_ROOT_HOST":      []byte("%"),
 		"MYSQL_NODES":          []byte(seeds),
-		"MYSQL_REPL_USER":      []byte("root"),
-		"MYSQL_REPL_PASSWORD":  []byte(*cr.Spec.RootPassword),
 	}
 
 	if cr.Spec.ClusterMode == rdsv1alpha1.ModeSemiSync {
-		secret.Data["SEMI_SYNC_DOUBLE_MASTER"] = []byte(strconv.FormatBool(semiSyncDoubleMaster))
+		secret.Data["SEMI_SYNC_DOUBLE_MASTER_HA"] = []byte(strconv.FormatBool(semiSyncDoubleMaster))
 		secret.Data["SEMI_SYNC_FIXED_MASTERS"] = []byte(semiSyncMasters)
+	}
+
+	if cr.Spec.ClusterUser != nil {
+		mysqlPassword, _ := base64.StdEncoding.DecodeString(cr.Spec.ClusterUser.Password)
+		sql := fmt.Sprintf(`
+			USE mysql;
+			CREATE USER IF NOT EXISTS %s@'%s' IDENTIFIED WITH mysql_native_password BY '%s';
+			GRANT %s ON %s TO %s@'%s';
+			FLUSH PRIVILEGES;
+		`,
+			cr.Spec.ClusterUser.Username,
+			cr.Spec.ClusterUser.Domain,
+			mysqlPassword,
+			strings.Join(cr.Spec.ClusterUser.Privileges, ","),
+			cr.Spec.ClusterUser.DatabaseTarget,
+			cr.Spec.ClusterUser.Username,
+			cr.Spec.ClusterUser.Domain,
+		)
+		secret.Data["init.sql"] = []byte(sql)
 	}
 
 	if cr.Spec.ExtraConfigDir != nil {

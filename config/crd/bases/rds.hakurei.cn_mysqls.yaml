@@ -882,6 +882,38 @@ spec:
                 description: ClusterMode mysql cluster mode,values are [ MGRMP MGRSP
                   SemiSync Async ]
                 type: string
+              clusterUser:
+                description: ClusterUser mysql cluster replication user
+                properties:
+                  databaseTarget:
+                    description: 'DatabaseTarget which database or tables will granted
+                      privileges to this user. for example : grant all privileges
+                      on *.* to user xxx@''%'' indentified by ''xxxxx'', in this case,
+                      DatabaseTarget value should be ''*.*'''
+                    type: string
+                  domain:
+                    description: 'Domain user login domain , for example : ''%'''
+                    type: string
+                  password:
+                    description: Password mysql login password of this user
+                    type: string
+                  privileges:
+                    description: 'Privileges mysql grant sql privileges, for example
+                      : []stirng{ "SELECT" ,"REPLICATION CLIENT"} or []string{"ALL
+                      PRIVILEGES"}'
+                    items:
+                      type: string
+                    type: array
+                  username:
+                    description: Username mysql login account name
+                    type: string
+                required:
+                - databaseTarget
+                - domain
+                - password
+                - privileges
+                - username
+                type: object
               command:
                 description: Command Kafka container command
                 items:
@@ -890,6 +922,10 @@ spec:
               configImage:
                 description: ConfigImage mysql initContainer for render mysql/proxysql
                   config and boostrap mysql cluster
+                type: string
+              extraConfig:
+                description: ExtraConfig write your own mysql config to override operator
+                  nested mysql config. content will merge into ${extraConfigDir}/my.cnf
                 type: string
               extraConfigDir:
                 description: ExtraConfigDir my.cnf include dir
@@ -1234,9 +1270,9 @@ spec:
               semiSync:
                 description: SemiSync mysql semi sync replication options
                 properties:
-                  doubleMaster:
-                    description: DoubleMaster if true , mysql-0 and mysql-1 will be
-                      cluster masters,they copy data from each other
+                  doubleMasterHA:
+                    description: DoubleMasterHA if true , mysql-0 and mysql-1 will
+                      be cluster masters,they copy data from each other
                     type: boolean
                 type: object
               serviceAccountName:
@@ -1292,42 +1328,6 @@ spec:
                       type: string
                   type: object
                 type: array
-              users:
-                description: MysqlUsers a list of users will be created when initialize
-                  cluster
-                items:
-                  description: MysqlUser mysql user settings
-                  properties:
-                    databaseTarget:
-                      description: 'DatabaseTarget which database or tables will granted
-                        privileges to this user. for example : grant all privileges
-                        on *.* to user xxx@''%'' indentified by ''xxxxx'', in this
-                        case, DatabaseTarget value should be ''*.*'''
-                      type: string
-                    domain:
-                      description: 'Domain user login domain , for example : ''%'''
-                      type: string
-                    password:
-                      description: Password mysql login password of this user
-                      type: string
-                    privileges:
-                      description: 'Privileges mysql grant sql privileges, for example
-                        : []stirng{ "SELECT" ,"REPLICATION CLIENT"} or []string{"ALL
-                        PRIVILEGES"}'
-                      items:
-                        type: string
-                      type: array
-                    username:
-                      description: Username mysql login account name
-                      type: string
-                  required:
-                  - databaseTarget
-                  - domain
-                  - password
-                  - privileges
-                  - username
-                  type: object
-                type: array
               whitelist:
                 description: Whitelist most of time it's kuberenetes pod CIDR and
                   service CIDR, for example []string{"10.24.0.0/16","10.25.0.0/16"}
@@ -1346,6 +1346,10 @@ spec:
           status:
             description: MysqlStatus defines the observed state of Mysql
             properties:
+              healthyMembers:
+                items:
+                  type: string
+                type: array
               masters:
                 description: Masters current mysql cluster masters
                 items:

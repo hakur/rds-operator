@@ -17,10 +17,7 @@ const (
 	ModeMGRSP ClusterMode = "MGRSP"
 	// ModeSemiSync cluster mode is  mysql semi sync
 	ModeSemiSync ClusterMode = "SemiSync"
-	// ModeAsync cluster mode is mysql traditional aysnc replication
-	ModeAsync ClusterMode = "Async"
 
-	MysqlPhaseCreating    ClusterPhase = "Creating"
 	MysqlPhaseNotReady    ClusterPhase = "NotReady"
 	MysqlPhaseRunning     ClusterPhase = "Running"
 	MysqlPhaseTerminating ClusterPhase = "Terminating"
@@ -35,8 +32,8 @@ type MysqlMGRSinglePrimaryOptions struct {
 }
 
 type MysqlSemiSyncOptions struct {
-	// DoubleMaster if true , mysql-0 and mysql-1 will be cluster masters,they copy data from each other
-	DoubleMaster bool `json:"doubleMaster,omitempty"`
+	// DoubleMasterHA if true , mysql-0 and mysql-1 will be cluster masters,they copy data from each other
+	DoubleMasterHA bool `json:"doubleMasterHA,omitempty"`
 }
 
 // MysqlUser mysql user settings
@@ -60,8 +57,9 @@ type MysqlSpec struct {
 	// ClusterMode mysql cluster mode,values are [ MGRMP MGRSP SemiSync Async ]
 	ClusterMode ClusterMode `json:"clusterMode"`
 	// RootPassword mysql root password, if empty, an will allow empty password login
-	RootPassword     *string `json:"rootPassword,omitempty"`
-	StorageClassName string  `json:"storageClassName"`
+	RootPassword *string `json:"rootPassword,omitempty"`
+	// StorageClassName kuberentes storage class name of this mysql pod
+	StorageClassName string `json:"storageClassName"`
 	// ConfigImage mysql initContainer for render mysql/proxysql config and boostrap mysql cluster
 	ConfigImage string `json:"configImage"`
 	// Replicas mysql cluster pod total count,contains master and slave
@@ -74,19 +72,23 @@ type MysqlSpec struct {
 	MGRSP *MysqlMGRSinglePrimaryOptions `json:"mgrsp,omitempty"`
 	// SemiSync mysql semi sync replication options
 	SemiSync *MysqlSemiSyncOptions `json:"semiSync,omitempty"`
+	// ExtraConfig write your own mysql config to override operator nested mysql config.
+	// content will merge into ${extraConfigDir}/my.cnf
+	ExtraConfig string `json:"extraConfig,omitempty"`
 	// ExtraConfigDir my.cnf include dir
 	ExtraConfigDir *string `json:"extraConfigDir,omitempty"`
-	// MysqlUsers a list of users will be created when initialize cluster
-	Users   []MysqlUser `json:"users,omitempty"`
-	MaxConn *int        `json:"maxConn,omitempty"`
+	// ClusterUser mysql cluster replication user
+	ClusterUser *MysqlUser `json:"clusterUser,omitempty"`
+	MaxConn     *int       `json:"maxConn,omitempty"`
 }
 
 // MysqlStatus defines the observed state of Mysql
 type MysqlStatus struct {
 	// Masters current mysql cluster masters
-	Masters []string     `json:"masters,omitempty"`
-	Members []string     `json:"members,omitempty"`
-	Phase   ClusterPhase `json:"phase,omitempty"`
+	Masters        []string     `json:"masters,omitempty"`
+	Members        []string     `json:"members,omitempty"`
+	HealthyMembers []string     `json:"healthyMembers,omitempty"`
+	Phase          ClusterPhase `json:"phase,omitempty"`
 }
 
 //+genclient

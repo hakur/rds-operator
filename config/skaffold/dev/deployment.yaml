@@ -1,0 +1,12 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: rds-operator
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      containers:
+        - name: operator
+          image: rumia/rds-operator
+          imagePullPolicy: Always

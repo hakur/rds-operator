@@ -1,4 +1,4 @@
-package sidecar
+package main
 
 import (
 	"os"
@@ -22,6 +22,10 @@ type MysqlFlagValues struct {
 	Whitelist []string
 	// Port mysql server port
 	Port int
+	// SemiSyncDoubleMasterHA is cluster under semi sync replication mode, and there need two master node join each other
+	SemiSyncDoubleMasterHA bool
+	// MysqlVersion mysql server version must be vX.X.X number
+	MysqlVersion string
 }
 
 type MysqlCommand struct {
@@ -41,6 +45,8 @@ func (t *MysqlCommand) Register() {
 	configCmd.Flag("white-list", "mysql server white list").Default(util.EnvOrDefault("MYSQL_CFG_WHITE_LIST", "10.0.0.0/8,192.0.0.0/8")).StringsVar(&t.flagVar.Whitelist)
 	configCmd.Flag("port", "mysql server listen port").Default(util.EnvOrDefault("MYSQL_CFG_PORT", "3306")).IntVar(&t.flagVar.Port)
 	configCmd.Flag("dump", "output generated mysqld config on stdout, to enable in format --dump without any argument").Default(util.EnvOrDefault("MYSQL_CFG_DUMP", "false")).BoolVar(&t.flagVar.Dump)
+	configCmd.Flag("semi-sync-double-master-ha", "is cluster under semi sync replication mode, and there need two master node join each other").Default(util.EnvOrDefault("SEMI_SYNC_DOUBLE_MASTER_HA", "false")).BoolVar(&t.flagVar.SemiSyncDoubleMasterHA)
+	configCmd.Flag("mysql-version", "mysql server version").Default(util.EnvOrDefault("MYSQL_VERSION", "v5.7.34")).StringVar(&t.flagVar.MysqlVersion)
 }
 
 func getMysqlServerID() int {

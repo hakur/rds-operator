@@ -1,6 +1,8 @@
-
+BRANCH := $(shell git for-each-ref --format='%(objectname) %(refname:short)' refs/heads | awk "/^$$(git rev-parse HEAD)/ {print \$$2}")
+COMMIT := $(shell git rev-parse HEAD)
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+OPERATOR_IMG ?= rumia/rds-operator:$(BRANCH)
+SIDECAR_IMG ?= rumia/rds-sidecar:$(BRANCH)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
@@ -58,16 +60,16 @@ test: manifests generate fmt vet ## Run tests.
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.
-	go build -o bin/manager main.go
+	go build -o bin/manager cmd/operator/main.go
 
 run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./main.go
+	go run cmd/operator/main.go
 
 docker-build: test ## Build docker image with the manager.
-	docker build -t ${IMG} .
+	docker build -t ${OPERATOR_IMG} -f assets/docker/operator/Dockerfile .
 
 docker-push: ## Push docker image with the manager.
-	docker push ${IMG}
+	docker push ${OPERATOR_IMG}
 
 ##@ Deployment
 
@@ -107,8 +109,36 @@ rm -rf $$TMP_DIR ;\
 }
 endef
 
-
-
 #########################################################################################################################
-sidecar-img:
-	docker build -t rumia/rds-sidecar -f docker/sidecar/Dockerfile .
+
+
+sidecar:
+	docker build -t $(SIDECAR_IMG) \
+	--build-arg Version=$(BRANCH) \
+	--build-arg Commit=$(COMMIT) \
+	-f assets/docker/sidecar/Dockerfile .
+operator:
+	docker build -t $(OPERATOR_IMG) \
+	--build-arg Version=$(BRANCH) \
+	--build-arg Commit=$(COMMIT) \
+	-f assets/docker/operator/Dockerfile .
+yaml:
+	rm -rf release
+	mkdir release
+	cd config/manager && $(KUSTOMIZE) edit set image controller=rumia/rds-operator:${BRANCH}
+	$(KUSTOMIZE) build config/default > release/operator.yaml
+
+gen: generate manifests install
+	cd hack && ./update-codegen.sh
+	
+dev:
+	go build -ldflags "-s -w -X github.com/hakur/rds-operator/pkg/types.Version=$(BRANCH) -X github.com/hakur/rds-operator/pkg/types.Commit=$(COMMIT)" -o rds-operator cmd/operator/main.go
+	source hack/dev-env.sh && ./rds-operator
+
+skaffold:
+	go build -ldflags "-s -w -X github.com/hakur/rds-operator/pkg/types.Version=$(BRANCH) -X github.com/hakur/rds-operator/pkg/types.Commit=$(COMMIT)" -o rds-operator cmd/operator/main.go
+	skaffold dev --port-forward=user,services --tail
+
+release: yaml operator sidecar # make release pack
+#	cp -r -t release apis assets cmd controllers config docs pkg util Makefile Readme.md skaffold.yaml
+	

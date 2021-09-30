@@ -16,23 +16,17 @@ spec:
   whitelist: # most of time , it's kubernetes Pod CIDR and Service CIDR
     - "10.0.0.0/8"
   extraConfigDir: /etc/my.cnf.d/
-  users:
-  - databaseTarget: "*.*"
+  clusterUser: # user will create when mysql initialization
+    username: replication
+    password: cmVwbGljYXRpb25fcGFzc3dvcmQ=
+    databaseTarget: "*.*"
     domain: "%"
-    password: "monitor_me"
     privileges:
-      - "REPLICATION SLAVE"
-      - "REPLICATION CLIENT"
-      - "SELECT"
-    username: monitor
-  - databaseTarget: "*.*"
-    domain: "%"
-    password: "replication"
-    privileges:
-      - "REPLICATION SLAVE"
-      - "REPLICATION CLIENT"
-      - "SELECT"
-    username: mgr
+    - "REPLICATION SLAVE"
+    - "REPLICATION CLIENT"
+    - "SELECT"
+    - "SUPER"
+    
     # readinessProbe:
     #   exec:
     #     command:

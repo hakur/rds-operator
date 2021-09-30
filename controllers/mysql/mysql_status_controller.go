@@ -2,77 +2,85 @@ package mysql
 
 import (
 	"context"
-	"fmt"
+	"encoding/base64"
+	"reflect"
+	"strconv"
 	"strings"
 
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
-	"github.com/hakur/rds-operator/controllers/mysql/builder"
-	"github.com/hakur/rds-operator/pkg/types"
-	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"github.com/hakur/rds-operator/pkg/mysql"
+	"github.com/sirupsen/logrus"
 )
+
+func GetMysqlHosts(cr *rdsv1alpha1.Mysql) (hosts []string) {
+	for i := 0; i < int(*cr.Spec.Replicas); i++ {
+		hosts = append(hosts, cr.Name+"-mysql-"+strconv.Itoa(i))
+	}
+	return
+}
+
+func GetMysqlDataSources(cr *rdsv1alpha1.Mysql) (ds []*mysql.DSN) {
+	mysqlPassword, _ := base64.StdEncoding.DecodeString(cr.Spec.ClusterUser.Password)
+	for _, v := range GetMysqlHosts(cr) {
+		ds = append(ds, &mysql.DSN{
+			Host:     v + "." + cr.Namespace,
+			Port:     3306,
+			Username: cr.Spec.ClusterUser.Username,
+			Password: string(mysqlPassword),
+			DBName:   "mysql",
+		})
+	}
+	return
+}
 
 // checkClusterStatus check cluster if is running , if not running, try to boostrap cluster
 func (t *MysqlReconciler) checkClusterStatus(ctx context.Context, cr *rdsv1alpha1.Mysql) (err error) {
-	var pods corev1.PodList
-	if err = t.List(ctx, &pods, client.InNamespace(cr.Namespace), client.MatchingLabels(builder.BuildMysqlLabels(cr))); err != nil && client.IgnoreNotFound(err) != nil {
-		return err
-	}
+	var clusterManager mysql.ClusterManager
+	var dataSources = GetMysqlDataSources(cr)
 
+	// set default values
+	masterHosts := cr.Status.Masters
 	cr.Status.Members = GetMysqlHosts(cr)
-	if cr.Status.Phase == "" {
-		cr.Status.Phase = rdsv1alpha1.MysqlPhaseCreating
-	}
+	cr.Status.Masters = []string{}
+	cr.Status.HealthyMembers = []string{}
+	cr.Status.Phase = rdsv1alpha1.MysqlPhaseNotReady
 
-	var podNames []string
-	var allPodsRunning bool = true
-	firstRunningPodName := ""
-	for _, pod := range pods.Items {
-		if pod.Status.Phase == corev1.PodRunning {
-			if firstRunningPodName == "" {
-				cr.Status.Phase = rdsv1alpha1.MysqlPhaseNotReady
-				firstRunningPodName = pod.Name
-			}
+	switch cr.Spec.ClusterMode {
+	case rdsv1alpha1.ModeMGRSP:
+		clusterManager = &mysql.MGRSP{DataSrouces: dataSources}
+	case rdsv1alpha1.ModeSemiSync:
+		if cr.Spec.SemiSync != nil {
+			clusterManager = &mysql.SemiSync{DataSrouces: dataSources, DoubleMasterHA: cr.Spec.SemiSync.DoubleMasterHA}
 		} else {
-			allPodsRunning = false
+			clusterManager = &mysql.SemiSync{DataSrouces: dataSources}
 		}
-
-		podNames = append(podNames, pod.Name)
 	}
 
-	if firstRunningPodName == "" && !allPodsRunning {
-		cr.Status.Phase = rdsv1alpha1.MysqlPhaseNotReady
-		return types.ErrPodNotRunning
-	}
-
-	master, err := t.Helper.FindMaster(cr.Namespace, firstRunningPodName)
-	if err != nil {
-		return
-	}
-
-	if err = t.Helper.StartCluster(cr.Namespace, podNames); err != nil {
+	if err = clusterManager.StartCluster(ctx); err != nil {
 		return err
 	}
 
-	if len(cr.Status.Members) != len(podNames) {
-		cr.Status.Phase = rdsv1alpha1.MysqlPhaseNotReady
-		return fmt.Errorf("%w", types.ErrReplicasNotDesired)
+	for _, v := range clusterManager.HealthyMembers(ctx) {
+		cr.Status.HealthyMembers = append(cr.Status.HealthyMembers, strings.ReplaceAll(v.Host, "."+cr.Namespace, ""))
 	}
 
-	if master == "" {
-		return fmt.Errorf("%w", types.ErrMasterNoutFound)
-	}
-
-	master = strings.Trim(master, ",")
-
-	cr.Status.Masters = strings.Split(master, ",")
-
-	if master != "" {
+	if len(cr.Status.HealthyMembers) == len(cr.Status.Members) {
 		cr.Status.Phase = rdsv1alpha1.MysqlPhaseRunning
+	} else {
+		cr.Status.Phase = rdsv1alpha1.MysqlPhaseNotReady
 	}
 
-	if cr.DeletionGracePeriodSeconds != nil {
-		cr.Status.Phase = rdsv1alpha1.MysqlPhaseTerminating
+	if masters, err := clusterManager.FindMaster(ctx); err == nil {
+		for _, master := range masters {
+			cr.Status.Masters = append(cr.Status.Masters, strings.ReplaceAll(master.Host, "."+cr.Namespace, ""))
+		}
+	} else {
+		return err
+	}
+
+	if !reflect.DeepEqual(masterHosts, cr.Status.Masters) {
+		// master changed, need to notify mysql proxy middleware
+		logrus.Debug("master list changed, need to notify mysql proxy middleware")
 	}
 
 	return err

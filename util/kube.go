@@ -3,8 +3,6 @@ package util
 import (
 	"bytes"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -67,28 +65,6 @@ func ExecPodOnce(opts ExecPodOnceOpts) (result []byte, err error) {
 	stdErr := bytes.TrimSpace(stderrBuf.Bytes())
 	if len(stdErr) > 0 {
 		err = fmt.Errorf("spdy executor exec [namespace=%s] [pod=%s] [container=%s] strandard error -> %s", opts.Namespace, opts.PodName, opts.ContainerName, string(stdErr))
-	}
-
-	return
-}
-
-// BuildScriptsCM generate shell script config map
-func BuildScriptsCM(namespace, name string, labels map[string]string, files []string) (cm *corev1.ConfigMap, err error) {
-	cm = new(corev1.ConfigMap)
-	cm.APIVersion = "v1"
-	cm.Kind = "ConfigMap"
-	cm.Name = name
-	cm.Namespace = namespace
-	cm.Labels = labels
-	cm.Data = map[string]string{}
-
-	for _, v := range files {
-		script, err := os.ReadFile("./scripts/" + v)
-		if err != nil {
-			return nil, err
-		}
-
-		cm.Data[filepath.Base(v)] = string(script)
 	}
 
 	return
