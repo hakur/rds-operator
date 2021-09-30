@@ -27,15 +27,22 @@ func (t *SemiSync) StartCluster(ctx context.Context) (err error) {
 		var masters []*DSN
 		var master *DSN
 		var maxMasterServerID = 1
-		masters, _ = t.FindMaster(ctx)
+
 		if t.DoubleMasterHA {
 			maxMasterServerID = 2
+			for k, dsn := range t.DataSrouces { // generate masters
+				if k+1 <= maxMasterServerID {
+					masters = append(masters, dsn)
+				}
+			}
 		}
 
 		for k, dsn := range t.DataSrouces { // ordinary start mysql semi sync nodes
-			if k+1 <= maxMasterServerID { //&& len(masters) < 1 {
+			if k+1 <= maxMasterServerID {
 				err = t.bootCluster(ctx, dsn, masters)
-				master = dsn
+				if err == nil {
+					master = dsn
+				}
 			} else {
 				err = t.joinMaster(ctx, dsn, master, 1)
 			}
@@ -126,7 +133,7 @@ func (t *SemiSync) joinMaster(ctx context.Context, dsn *DSN, master *DSN, superR
 		logrus.WithFields(map[string]interface{}{"err": err.Error(), "host": dsn.Host}).Debugf(types.ErrMysqlFindMasterFromSalveFailed.Error())
 	}
 
-	if myMaster != master.Host {
+	if myMaster != master.Host || myMaster == "" {
 		if _, err = dbConn.ExecContext(ctx, "STOP SLAVE"); err != nil {
 			return fmt.Errorf("%w,stop slave [host=%s] err -> %s", types.ErrMysqlStartSemiSyncSlaveFailed, dsn.Host, err.Error())
 		}
@@ -175,18 +182,30 @@ func (t *SemiSync) FindMaster(ctx context.Context) (masters []*DSN, err error) {
 }
 
 func (t *SemiSync) getMyMaster(ctx context.Context, dbConn *sql.DB) (masterHost string, err error) {
-	result, err := dbConn.QueryContext(ctx, "show global status like 'master_host'")
+	result, err := dbConn.QueryContext(ctx, "SHOW SLAVE STATUS")
 	if err != nil {
-		return
+		return masterHost, fmt.Errorf("mysql query result scan global status master_host failed, err -> %s", err.Error())
 	}
 
-	if result.Next() {
-		result.Scan(&masterHost, &masterHost) // two colum,but second colume is target value
-	} else {
-		err = errors.New("mysql query result scan global status master_host failed")
+	// code source http://noops.me/?p=1128
+	cols, _ := result.Columns()
+	buff := make([]interface{}, len(cols))
+	data := make([]string, len(cols))
+	for i, _ := range buff {
+		buff[i] = &data[i]
 	}
 
-	return
+	for result.Next() {
+		result.Scan(buff...)
+	}
+
+	for k, v := range cols {
+		if v == "Master_Host" {
+			masterHost = data[k]
+		}
+	}
+
+	return masterHost, nil
 }
 
 func (t *SemiSync) checkMasterON(ctx context.Context, dbConn *sql.DB) (on bool, err error) {

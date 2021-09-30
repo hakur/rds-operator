@@ -2,10 +2,14 @@ package mysql
 
 import (
 	"context"
+	"encoding/base64"
+	"reflect"
 	"strconv"
+	"strings"
 
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
 	"github.com/hakur/rds-operator/pkg/mysql"
+	"github.com/sirupsen/logrus"
 )
 
 func GetMysqlHosts(cr *rdsv1alpha1.Mysql) (hosts []string) {
@@ -16,12 +20,13 @@ func GetMysqlHosts(cr *rdsv1alpha1.Mysql) (hosts []string) {
 }
 
 func GetMysqlDataSources(cr *rdsv1alpha1.Mysql) (ds []*mysql.DSN) {
+	mysqlPassword, _ := base64.StdEncoding.DecodeString(cr.Spec.ClusterUser.Password)
 	for _, v := range GetMysqlHosts(cr) {
 		ds = append(ds, &mysql.DSN{
 			Host:     v + "." + cr.Namespace,
 			Port:     3306,
-			Username: "root",
-			Password: *cr.Spec.RootPassword,
+			Username: cr.Spec.ClusterUser.Username,
+			Password: string(mysqlPassword),
 			DBName:   "mysql",
 		})
 	}
@@ -34,7 +39,9 @@ func (t *MysqlReconciler) checkClusterStatus(ctx context.Context, cr *rdsv1alpha
 	var dataSources = GetMysqlDataSources(cr)
 
 	// set default values
+	masterHosts := cr.Status.Masters
 	cr.Status.Members = GetMysqlHosts(cr)
+	cr.Status.Masters = []string{}
 	cr.Status.HealthyMembers = []string{}
 	cr.Status.Phase = rdsv1alpha1.MysqlPhaseNotReady
 
@@ -42,7 +49,11 @@ func (t *MysqlReconciler) checkClusterStatus(ctx context.Context, cr *rdsv1alpha
 	case rdsv1alpha1.ModeMGRSP:
 		clusterManager = &mysql.MGRSP{DataSrouces: dataSources}
 	case rdsv1alpha1.ModeSemiSync:
-		clusterManager = &mysql.SemiSync{DataSrouces: dataSources}
+		if cr.Spec.SemiSync != nil {
+			clusterManager = &mysql.SemiSync{DataSrouces: dataSources, DoubleMasterHA: cr.Spec.SemiSync.DoubleMasterHA}
+		} else {
+			clusterManager = &mysql.SemiSync{DataSrouces: dataSources}
+		}
 	}
 
 	if err = clusterManager.StartCluster(ctx); err != nil {
@@ -50,13 +61,26 @@ func (t *MysqlReconciler) checkClusterStatus(ctx context.Context, cr *rdsv1alpha
 	}
 
 	for _, v := range clusterManager.HealthyMembers(ctx) {
-		cr.Status.HealthyMembers = append(cr.Status.HealthyMembers, v.Host)
+		cr.Status.HealthyMembers = append(cr.Status.HealthyMembers, strings.ReplaceAll(v.Host, "."+cr.Namespace, ""))
 	}
 
 	if len(cr.Status.HealthyMembers) == len(cr.Status.Members) {
 		cr.Status.Phase = rdsv1alpha1.MysqlPhaseRunning
 	} else {
 		cr.Status.Phase = rdsv1alpha1.MysqlPhaseNotReady
+	}
+
+	if masters, err := clusterManager.FindMaster(ctx); err == nil {
+		for _, master := range masters {
+			cr.Status.Masters = append(cr.Status.Masters, strings.ReplaceAll(master.Host, "."+cr.Namespace, ""))
+		}
+	} else {
+		return err
+	}
+
+	if !reflect.DeepEqual(masterHosts, cr.Status.Masters) {
+		// master changed, need to notify mysql proxy middleware
+		logrus.Debug("master list changed, need to notify mysql proxy middleware")
 	}
 
 	return err

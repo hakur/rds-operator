@@ -5,6 +5,6 @@ import (
 )
 
 func main() {
-	RegisterCommand()
+	new(MysqlCommand).Register()
 	kingpin.Parse()
 }

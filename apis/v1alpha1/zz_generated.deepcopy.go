@@ -546,12 +546,10 @@ func (in *MysqlSpec) DeepCopyInto(out *MysqlSpec) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.Users != nil {
-		in, out := &in.Users, &out.Users
-		*out = make([]MysqlUser, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
+	if in.ClusterUser != nil {
+		in, out := &in.ClusterUser, &out.ClusterUser
+		*out = new(MysqlUser)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.MaxConn != nil {
 		in, out := &in.MaxConn, &out.MaxConn

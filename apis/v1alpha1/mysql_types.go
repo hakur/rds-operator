@@ -32,8 +32,8 @@ type MysqlMGRSinglePrimaryOptions struct {
 }
 
 type MysqlSemiSyncOptions struct {
-	// DoubleMaster if true , mysql-0 and mysql-1 will be cluster masters,they copy data from each other
-	DoubleMaster bool `json:"doubleMaster,omitempty"`
+	// DoubleMasterHA if true , mysql-0 and mysql-1 will be cluster masters,they copy data from each other
+	DoubleMasterHA bool `json:"doubleMasterHA,omitempty"`
 }
 
 // MysqlUser mysql user settings
@@ -57,8 +57,9 @@ type MysqlSpec struct {
 	// ClusterMode mysql cluster mode,values are [ MGRMP MGRSP SemiSync Async ]
 	ClusterMode ClusterMode `json:"clusterMode"`
 	// RootPassword mysql root password, if empty, an will allow empty password login
-	RootPassword     *string `json:"rootPassword,omitempty"`
-	StorageClassName string  `json:"storageClassName"`
+	RootPassword *string `json:"rootPassword,omitempty"`
+	// StorageClassName kuberentes storage class name of this mysql pod
+	StorageClassName string `json:"storageClassName"`
 	// ConfigImage mysql initContainer for render mysql/proxysql config and boostrap mysql cluster
 	ConfigImage string `json:"configImage"`
 	// Replicas mysql cluster pod total count,contains master and slave
@@ -76,9 +77,9 @@ type MysqlSpec struct {
 	ExtraConfig string `json:"extraConfig,omitempty"`
 	// ExtraConfigDir my.cnf include dir
 	ExtraConfigDir *string `json:"extraConfigDir,omitempty"`
-	// MysqlUsers a list of users will be sync to cluster,if CR resource changed, user list will be recheck
-	Users   []MysqlUser `json:"users,omitempty"`
-	MaxConn *int        `json:"maxConn,omitempty"`
+	// ClusterUser mysql cluster replication user
+	ClusterUser *MysqlUser `json:"clusterUser,omitempty"`
+	MaxConn     *int       `json:"maxConn,omitempty"`
 }
 
 // MysqlStatus defines the observed state of Mysql

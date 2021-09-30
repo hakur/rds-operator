@@ -2,7 +2,7 @@ BRANCH := $(shell git for-each-ref --format='%(objectname) %(refname:short)' ref
 COMMIT := $(shell git rev-parse HEAD)
 # Image URL to use all building/pushing image targets
 OPERATOR_IMG ?= rumia/rds-operator:$(BRANCH)
-SIDECAR_IMG ?= rumia/rds-operator:$(BRANCH)
+SIDECAR_IMG ?= rumia/rds-sidecar:$(BRANCH)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
@@ -129,9 +129,8 @@ yaml:
 	$(KUSTOMIZE) build config/default > release/operator.yaml
 
 gen: generate manifests install
-	cd hack
-	./update-codegen.sh
-	cd ..
+	cd hack && ./update-codegen.sh
+	
 dev:
 	go build -ldflags "-s -w -X github.com/hakur/rds-operator/pkg/types.Version=$(BRANCH) -X github.com/hakur/rds-operator/pkg/types.Commit=$(COMMIT)" -o rds-operator cmd/operator/main.go
 	source hack/dev-env.sh && ./rds-operator
