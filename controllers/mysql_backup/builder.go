@@ -17,7 +17,7 @@ type CronJobBuilder struct {
 func BuildSecret(cr *rdsv1alpha1.MysqlBackup) (secret *corev1.Secret) {
 	var hosts []string
 
-	for _, v := range cr.Spec.Hosts {
+	for _, v := range cr.Spec.Address {
 		hosts = append(hosts, v.Host)
 	}
 

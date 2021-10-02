@@ -40,13 +40,27 @@ type BackupWebHookPostData struct {
 	SourceServer string `json:"sourceServer"`
 }
 
+type MysqlBackupWebhook struct {
+	// URL http request url
+	URL string `json:"url"`
+	// Password http basic auth username
+	Username string `json:"username"`
+	// Password http basic auth password
+	Password string `json:"password"`
+	// Headers http header fields, set cookie or some bearToken in this filed
+	Headers map[string]string `json:"headers"`
+	// DeleteResource if this field value is true, webhook post return http response code 200 and content is "ok", then delete MysqlBackup Custom Resource
+	// when backup job type is cronjob , must set this field value to false
+	DeleteResource bool `json:"deleteResource"`
+}
+
 // MysqlBackupSpec defines the desired state of Mysql
 type MysqlBackupSpec struct {
 	CommonField `json:",inline"`
 	// S3 use aws s3 object storage service for store backup files
 	S3 *S3Config `json:"s3,omitempty"`
 	// Mysql host for backup
-	Hosts []MysqlHost `json:"mysql,omitempty"`
+	Address []MysqlHost `json:"address,omitempty"`
 	// ClusterMode mysql cluster mode
 	ClusterMode ClusterMode `json:"clusterMode"`
 	// PVCName if pvc name is empty, a emptydir will be used as tmp storage for mysql backup files
@@ -66,7 +80,7 @@ type MysqlBackupSpec struct {
 	// how to extra zlib compressed mysql backup file, see ???
 	UseZlibCompress *bool `json:"useZlibCompress,omitempty"`
 	// Webhook send backup file info POST to webhook url
-	Webhook string `json:"webhook,omitempty"`
+	Webhook MysqlBackupWebhook `json:"webhook,omitempty"`
 }
 
 // MysqlBackupStatus defines the observed state of Mysql

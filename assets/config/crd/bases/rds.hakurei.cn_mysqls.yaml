@@ -1280,6 +1280,8 @@ spec:
                   to use to run this pod. More info: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/'
                 type: string
               storageClassName:
+                description: StorageClassName kuberentes storage class name of this
+                  mysql pod
                 type: string
               storageSize:
                 description: StorageSize pvc disk size

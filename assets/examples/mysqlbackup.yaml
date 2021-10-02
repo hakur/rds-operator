@@ -4,15 +4,15 @@ metadata:
   name: yuxing
 spec:
   s3:
-    endpoint: http://192.168.113.175:30817
+    endpoint: http://192.168.1.4
     bucket: mysql-backup
-    accessKey: openpitrixminioaccesskey
-    securityKey: openpitrixminiosecretkey
+    accessKey: 
+    securityKey: 
     path: "/12"
   timeZone: Asia/Shanghai
   schedule: "*/1 * * * *"
   clusterMode: MGRSP
-  image: minio/mc:RELEASE.2021-09-02T09-21-27Z
+  image: rumia/rds-sidecar
   storageSize: 1Gi
   username: root
   password: zerocube
@@ -24,28 +24,10 @@ spec:
     limits:
       cpu: 100m
       memory: 256Mi
-  mysql:
+  address:
   - host: yuxing-mysql-0
     port: 3306
   - host: yuxing-mysql-1
     port: 3306
   - host: yuxing-mysql-2
     port: 3306
-  initContainerImage: mysql/mysql-server:5.7.34
-  initContainerCommand:
-  - /bin/bash
-  initContainerArgs:
-  - -c
-  - |
-    #!/bin/bash
-    rm -rf /data/backup
-    source /scripts/mysql.sh
-    BackupMaster /data/backup_$(date '+%Y-%m-%d_%H_%M')
-  command:
-  - /bin/bash
-  args:
-  - -c
-  - |
-    #!/bin/bash
-    source /scripts/mysql.sh
-    UploadToS3 /data

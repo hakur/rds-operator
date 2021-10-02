@@ -10,7 +10,8 @@
             - [ ] MGR multi primary
             - [ ] Semi sync replication
 * mysqlbackup.rds.hakurei.cn/v1alpha1
-    * logical backup dump sql to s3 server [x]
+    - [x] logical backup dump sql to s3 server
+    - [ ] physical backup
 
 * redis.rds.hakurei.cn/v1alpha1
     * redis version
@@ -29,6 +30,6 @@ use [kt-connect](https://github.com/alibaba/kt-connect) for development
 
 wsl2:
 ```
-    ktctl connect --method=sock5
-    make run
+    ktctl connect --method=sock5 # open terminal window, notice : when pod created or deleted, must restart ktctl, otherwise you will see many context exceeded
+    make dev # open new terminal window
 ```
