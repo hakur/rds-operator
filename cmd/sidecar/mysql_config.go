@@ -87,7 +87,7 @@ func (t *MysqlConfigCommand) Action(ctx *kingpin.ParseContext) (err error) {
 
 func (t *MysqlConfigCommand) mgrspConfig() (fileContent string, err error) {
 	var seeds string
-	for _, v := range t.GlobalVar.Address {
+	for _, v := range t.GlobalVar.Addresses {
 		host := strings.Split(v, ":")[0]
 		seeds += host + ":33061,"
 	}
@@ -126,7 +126,7 @@ func (t *MysqlConfigCommand) mgrspConfig() (fileContent string, err error) {
 
 func (t *MysqlConfigCommand) mgrmpConfig() (fileContent string, err error) {
 	var seeds string
-	for _, v := range t.GlobalVar.Address {
+	for _, v := range t.GlobalVar.Addresses {
 		host := strings.Split(v, ":")[0]
 		seeds += host + ":33061,"
 	}

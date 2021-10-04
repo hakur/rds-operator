@@ -11,7 +11,7 @@ spec:
   monitorUser: "monitor"
   monitorPassword: "monitor_me"
   adminUser: admin
-  adminPassword: zerocube
+  adminPassword: 123456
   nodePort: 32336 #set to zero if want use random nodeport,delete this field will disable nodeport
   storageSize: 1Gi
   readinessProbe:

@@ -4,7 +4,7 @@ metadata:
   name: yuxing
 spec:
   imagePullPolicy: IfNotPresent
-  rootPassword: "zerocube"
+  rootPassword: "123456"
   clusterMode: MGRSP
   storageClassName: hostpath
   timeZone: Asia/Shanghai
