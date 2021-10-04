@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"os/exec"
 	"strconv"
@@ -135,10 +133,9 @@ func (t *MysqlBackupCommand) Action(ctx *kingpin.ParseContext) (err error) {
 		logrus.Info("exec command:", cmd.String())
 	}
 
-	sqlContentBuf := bytes.NewBuffer([]byte{})
-	cmd.Stdout = bufio.NewWriter(sqlContentBuf)
+	pipe, _ := cmd.StdoutPipe()
 
-	if err = cmd.Run(); err != nil {
+	if err = cmd.Start(); err != nil {
 		logrus.WithField("err", err.Error()).Fatal("backup failed")
 	}
 
@@ -153,8 +150,10 @@ func (t *MysqlBackupCommand) Action(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	logrus.Info("uploading ", t.S3.Path+"/"+backupFileName, " to s3 server ...")
-	_, err = minioClient.PutObject(execCtx, t.S3.Bucket, t.S3.Path+"/"+backupFileName, bufio.NewReader(sqlContentBuf), -1, minio.PutObjectOptions{})
-
+	_, err = minioClient.PutObject(execCtx, t.S3.Bucket, t.S3.Path+"/"+backupFileName, pipe, -1, minio.PutObjectOptions{})
+	if err = cmd.Wait(); err != nil {
+		logrus.WithField("err", err.Error()).Fatal("backup failed")
+	}
 	logrus.Info("uploading ", t.S3.Path+"/"+backupFileName, " to s3 server success")
 
 	return err
