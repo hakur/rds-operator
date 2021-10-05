@@ -26,7 +26,9 @@ RUN go build -ldflags "-s -w -X github.com/hakur/rds-operator/pkg/types.Version=
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 # FROM gcr.io/distroless/static:nonroot
 FROM ubuntu:20.04
-WORKDIR /
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt update
+RUN apt install -y mysql-client-core-8.0 tzdata && apt purge
 COPY --from=builder /build/rds-operator .
 # USER 65532:65532
 

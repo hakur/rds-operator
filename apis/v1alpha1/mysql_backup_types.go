@@ -6,11 +6,11 @@ import (
 
 // S3Config aws s3 object storage server config
 type S3Config struct {
-	AccessKey   string `json:"accessKey"`
-	SecurityKey string `json:"securityKey"`
-	Endpoint    string `json:"endpoint"`
-	Bucket      string `json:"bucket"`
-	Path        string `json:"path"`
+	AccessKey       string `json:"accessKey"`
+	SecretAccessKey string `json:"secretAccessKey"`
+	Endpoint        string `json:"endpoint"`
+	Bucket          string `json:"bucket"`
+	Path            string `json:"path"`
 }
 
 // MysqlHost mysql back server connection settings
@@ -46,7 +46,7 @@ type MysqlBackupSpec struct {
 	// S3 use aws s3 object storage service for store backup files
 	S3 *S3Config `json:"s3,omitempty"`
 	// Mysql host for backup
-	Hosts []MysqlHost `json:"mysql,omitempty"`
+	Address []MysqlHost `json:"address,omitempty"`
 	// ClusterMode mysql cluster mode
 	ClusterMode ClusterMode `json:"clusterMode"`
 	// PVCName if pvc name is empty, a emptydir will be used as tmp storage for mysql backup files
@@ -58,15 +58,14 @@ type MysqlBackupSpec struct {
 	// Password password of all mysql hosts, used for this backup operation
 	Password string `json:"password"`
 	// Schedule k8s/linux cronjob schedule
-	Schedule             string   `json:"schedule"`
-	InitContainerCommand []string `json:"initContainerCommand"`
-	InitContainerArgs    []string `json:"initContainerArgs"`
-	InitContainerImage   string   `json:"initContainerImage"`
+	Schedule string `json:"schedule"`
 	// UseZlibCompress use zlib compress for mysqlpump command
 	// how to extra zlib compressed mysql backup file, see ???
 	UseZlibCompress *bool `json:"useZlibCompress,omitempty"`
 	// Webhook send backup file info POST to webhook url
-	Webhook string `json:"webhook,omitempty"`
+	Webhook *Webhook `json:"webhook,omitempty"`
+	// LockTable lock table when backup
+	LockTable bool `json:"lockTable,omitempty"`
 }
 
 // MysqlBackupStatus defines the observed state of Mysql
