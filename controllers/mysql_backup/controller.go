@@ -100,14 +100,6 @@ func (t *MysqlBackupReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Mysql
 	}
 
 	secret := BuildSecret(cr)
-	scriptsConfigMap, err := util.BuildScriptsCM(cr.Namespace, BuildScriptsConfigMapName(cr), BuildLabels(cr), []string{
-		"util.sh",
-		"mysql/mysql.sh",
-		"mysql/mysql-backup.sh",
-		"mysql/mysql-cluster.sh",
-		"mysql/mysql-mgrsp.sh",
-		"mysql/mysql-semi-sync.sh",
-	})
 
 	if err != nil {
 		return
@@ -118,10 +110,6 @@ func (t *MysqlBackupReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Mysql
 	}
 
 	if err = reconciler.ApplySecret(t.Client, ctx, secret, cr, t.Scheme); err != nil {
-		return
-	}
-
-	if err = reconciler.ApplyConfigMap(t.Client, ctx, scriptsConfigMap, cr, t.Scheme); err != nil {
 		return
 	}
 

@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"fmt"
 	"strconv"
 
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
@@ -32,38 +33,12 @@ func (t *MysqlBuilder) BuildMyCnfCM(cr *rdsv1alpha1.Mysql) (cm *corev1.ConfigMap
 
 	cnfContent := `
 [client]
-socket=/tmp/mysql.sock
 [mysqld]
-skip-name-resolve
-socket=/tmp/mysql.sock
-secure-file-priv=/var/lib/mysql-files
-user=mysql
-symbolic-links=0
-pid-file=/var/run/mysqld/mysqld.pid
-default-storage-engine=INNODB
-character-set-server=utf8
-collation-server=utf8_general_ci
-transaction_isolation=READ-COMMITTED
-
-gtid_mode=ON
-enforce-gtid-consistency=true
-
-sync_binlog=1
-log_bin=bin.log
-binlog_format=row
-binlog_gtid_simple_recovery=1
-
-relay_log=relay.log
-relay_log_recovery=1
-relay_log_info_repository=TABLE
-master_info_repository=TABLE
-binlog_checksum=NONE
-
-slave_skip_errors=ddl_exist_errors
 
 !includedir ` + cnfDir
 	cm.Data = map[string]string{
-		"my.cnf": cnfContent,
+		"my.cnf":       cnfContent,
+		"extra_config": t.CR.Spec.ExtraConfig,
 	}
 	return
 }
@@ -75,13 +50,14 @@ func (t *MysqlBuilder) buildMysqlVolumeMounts() (data []corev1.VolumeMount) {
 	data = append(data, corev1.VolumeMount{MountPath: "/etc/my.cnf.d", Name: "my-cnfd"})
 	data = append(data, corev1.VolumeMount{MountPath: "/var/lib/mysql", Name: "data"})
 	data = append(data, corev1.VolumeMount{MountPath: "/etc/localtime", Name: "localtime"})
-	data = append(data, corev1.VolumeMount{MountPath: "/scripts", Name: "scripts"})
+	data = append(data, corev1.VolumeMount{MountPath: "/docker-entrypoint-initdb.d", Name: "init-sql"})
 	return
 }
 
 // buildMysqlVolumes generate pod volumes
 func (t *MysqlBuilder) buildMysqlVolumes(cr *rdsv1alpha1.Mysql) (data []corev1.Volume) {
 	var mysqlConfigVolumeMode int32 = 0755
+	secret := BuildSecret(cr)
 
 	data = append(data, corev1.Volume{
 		Name: "mysql-sock",
@@ -120,10 +96,17 @@ func (t *MysqlBuilder) buildMysqlVolumes(cr *rdsv1alpha1.Mysql) (data []corev1.V
 		},
 	})
 
-	data = append(data, corev1.Volume{Name: "scripts", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{
-		LocalObjectReference: corev1.LocalObjectReference{Name: cr.Name + "-scripts"},
-		DefaultMode:          &mysqlConfigVolumeMode,
-	}}})
+	data = append(data, corev1.Volume{
+		Name: "init-sql",
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: secret.Name,
+				Items: []corev1.KeyToPath{
+					{Key: "init.sql", Path: "init.sql"},
+				},
+			},
+		},
+	})
 
 	return
 }
@@ -175,6 +158,10 @@ func (t *MysqlBuilder) BuildSts() (sts *appsv1.StatefulSet, err error) {
 	var podTemplateSpec corev1.PodTemplateSpec
 	var mysqlDataVolumeClaim corev1.PersistentVolumeClaim
 	var shareProcessNamespace = true
+
+	if t.CR.Spec.ClusterMode == rdsv1alpha1.ModeSemiSync && t.CR.Spec.SemiSync.DoubleMasterHA && t.CR.Spec.ClusterUser == nil {
+		return nil, fmt.Errorf("cluster enabled but cluster user not configured. CR resource spec.clusterUser is nil")
+	}
 
 	sts = new(appsv1.StatefulSet)
 

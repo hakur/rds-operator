@@ -6,11 +6,11 @@ import (
 
 // S3Config aws s3 object storage server config
 type S3Config struct {
-	AccessKey   string `json:"accessKey"`
-	SecurityKey string `json:"securityKey"`
-	Endpoint    string `json:"endpoint"`
-	Bucket      string `json:"bucket"`
-	Path        string `json:"path"`
+	AccessKey       string `json:"accessKey"`
+	SecretAccessKey string `json:"secretAccessKey"`
+	Endpoint        string `json:"endpoint"`
+	Bucket          string `json:"bucket"`
+	Path            string `json:"path"`
 }
 
 // MysqlHost mysql back server connection settings
@@ -19,27 +19,53 @@ type MysqlHost struct {
 	Port int    `json:"port"`
 }
 
+// BackupWebHookPostData POST http body json Data
+type BackupWebHookPostData struct {
+	// Status backup CR status, values are [Pending Generating Done]
+	// Pending mean pod is Created or Scheduling
+	// Gernating mean pod is Running
+	// Done mean pod is Completed
+	Status string `json:"status"`
+	// Path s3 path of this backup file
+	Path string `json:"path"`
+	// CreateTime create time of backup operation
+	CreateTime string `json:"createTime"`
+	// DoneTime backup oeration done time
+	DoneTime string `json:"doneTime"`
+	// backup file size bytes
+	Size int64 `json:"size"`
+	// CostSeconds how many seconds cost of backup operation, from create to finish
+	CostSeconds int `json:"costSeconds"`
+	// SourceServer backup file source server
+	SourceServer string `json:"sourceServer"`
+}
+
 // MysqlBackupSpec defines the desired state of Mysql
 type MysqlBackupSpec struct {
 	CommonField `json:",inline"`
 	// S3 use aws s3 object storage service for store backup files
-	S3          *S3Config   `json:"s3,omitempty"`
-	Hosts       []MysqlHost `json:"mysql,omitempty"`
+	S3 *S3Config `json:"s3,omitempty"`
+	// Mysql host for backup
+	Address []MysqlHost `json:"address,omitempty"`
+	// ClusterMode mysql cluster mode
 	ClusterMode ClusterMode `json:"clusterMode"`
 	// PVCName if pvc name is empty, a emptydir will be used as tmp storage for mysql backup files
 	PVCName *string `json:"pvcName,omitempty"`
 	// StorageSize mysql backup files tmp storage dir max size
 	StorageSize string `json:"storageSize"`
-	// Username username of all mysql hosts
+	// Username username of all mysql hosts, used for this backup operation
 	Username string `json:"username"`
-	// Password password of all mysql hosts
+	// Password password of all mysql hosts, used for this backup operation
 	Password string `json:"password"`
 	// Schedule k8s/linux cronjob schedule
-	Schedule             string   `json:"schedule"`
-	InitContainerCommand []string `json:"initContainerCommand"`
-	InitContainerArgs    []string `json:"initContainerArgs"`
-	InitContainerImage   string   `json:"initContainerImage"`
-	UseZlibCompress      *bool    `json:"useZlibCompress,omitempty"`
+	Schedule string `json:"schedule"`
+	// UseZlibCompress use zlib compress for mysqlpump command
+	// how to extra zlib compressed mysql backup file, see ???
+	UseZlibCompress *bool `json:"useZlibCompress,omitempty"`
+	// Webhook send backup file info POST to webhook url
+	Webhook *Webhook `json:"webhook,omitempty"`
+	// LockTable lock table when backup
+	LockTable bool `json:"lockTable,omitempty"`
 }
 
 // MysqlBackupStatus defines the observed state of Mysql

@@ -1,0 +1,46 @@
+apiVersion: rds.hakurei.cn/v1alpha1
+kind: ProxySQL
+metadata:
+  name: yuxing
+spec:
+  configImage: rumia/rds-sidecar
+  storageClassName: hostpath
+  timeZone: Asia/Shanghai
+  image: rumia/proxysql:2.2.0
+  mysqlVersion: "5.7.34"
+  monitorUser: "monitor"
+  monitorPassword: "monitor_me"
+  adminUser: admin
+  adminPassword: 123456
+  nodePort: 32336 #set to zero if want use random nodeport,delete this field will disable nodeport
+  storageSize: 1Gi
+  readinessProbe:
+    exec:
+      command:
+        - /bin/bash
+        - -c
+        - |
+          mysqladmin ping -u${PROXYSQL_ADMIN_USER} -p${PROXYSQL_ADMIN_PASSWORD} -p6032 -h127.0.0.1 > /dev/null 2>&1
+          if [ $? != 0 ];then
+            echo "proxysql 6032 not ready"
+            exit 1
+          fi
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 4
+    failureThreshold: 10
+  livenessProbe:
+    exec:
+        command:
+        - /bin/bash
+        - -c
+        - |
+          mysqladmin ping -u${PROXYSQL_ADMIN_USER} -p${PROXYSQL_ADMIN_PASSWORD} -p6032 -h127.0.0.1 > /dev/null 2>&1
+          if [ $? != 0 ];then
+            echo "proxysql 6032 not ready"
+            exit 1
+          fi
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 4
+    failureThreshold: 10

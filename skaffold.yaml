@@ -1,0 +1,31 @@
+apiVersion: skaffold/v2beta22
+kind: Config
+metadata:
+  name: rds-operator
+build:
+  artifacts:
+  - image: rumia/rds-operator
+    context: .
+    docker:
+      dockerfile: Dockerfile.dev
+  # - image: rumia/rds-operator
+  #   buildpacks:
+  #     builder: paketobuildpacks/builder:0.1.233-full  #gcr.io/buildpacks/builder:v1
+  #     # runImage: ubuntu:20.04
+  #     # dependencies:
+  #     trustBuilder: true
+  #     env:
+  #     - GOPROXY={{.GOPROXY}}
+  #   sync:
+  #     auto: false
+  
+deploy:
+  kustomize:
+    paths:
+    - config/skaffold/base
+profiles:
+- name: dev
+  deploy:
+    kustomize:
+      paths:
+      - config/skaffold/dev

@@ -1,0 +1,61 @@
+kind: Mysql
+apiVersion: rds.hakurei.cn/v1alpha1
+metadata:
+  name: yuxing
+spec:
+  imagePullPolicy: IfNotPresent
+  rootPassword: MTIzNDU2
+  clusterMode: MGRSP
+  storageClassName: hostpath
+  timeZone: Asia/Shanghai
+  configImage: rumia/rds-sidecar:inkube
+  image: mysql/mysql-server:5.7.34
+  replicas: 3
+  storageSize: 1Gi
+  maxConn: 300
+  whitelist: # most of time , it's kubernetes Pod CIDR and Service CIDR
+    - "10.0.0.0/8"
+  extraConfigDir: /etc/my.cnf.d/
+  clusterUser: # user will create when mysql initialization
+    username: replication
+    password: cmVwbGljYXRpb25fcGFzc3dvcmQ=
+    databaseTarget: "*.*"
+    domain: "%"
+    privileges:
+    - "REPLICATION SLAVE"
+    - "REPLICATION CLIENT"
+    - "SELECT"
+    - "SUPER"
+    
+    # readinessProbe:
+    #   exec:
+    #     command:
+    #     - /bin/bash
+    #     - -c
+    #     - |
+    #       mysqladmin ping -u root -p${MYSQL_ROOT_PASSWORD} > /dev/null 2>&1
+    #       if [ $? != 0 ];then
+    #         echo "mysql 3306 not ready"
+    #         exit 1
+    #       fi
+    #   initialDelaySeconds: 5
+    #   periodSeconds: 5
+    #   timeoutSeconds: 4
+    #   failureThreshold: 10
+    # livenessProbe:
+    #   exec:
+    #     command:
+    #     - /bin/bash
+    #     - -c
+    #     - |
+    #       primaryServer=$(mysql -uroot -p${MYSQL_ROOT_PASSWORD} -N -s -e "show status like 'group_replication_primary_member';" | awk '{print $2}')
+    #       if [ "$primaryServer" != "" ];then
+    #         exit 0
+    #       fi
+    #       echo "mysql primary server not found, mgr cluster not health!"
+    #       exit 1
+    #   initialDelaySeconds: 5
+    #   periodSeconds: 5
+    #   timeoutSeconds: 4
+    #   failureThreshold: 10
+  

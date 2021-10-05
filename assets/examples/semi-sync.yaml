@@ -1,0 +1,32 @@
+kind: Mysql
+apiVersion: rds.hakurei.cn/v1alpha1
+metadata:
+  name: semisync
+spec:
+  imagePullPolicy: IfNotPresent
+  rootPassword: "123456"
+  clusterMode: SemiSync
+  storageClassName: hostpath
+  timeZone: Asia/Shanghai
+  configImage: rumia/rds-sidecar
+  image: mysql/mysql-server:5.7.34
+  replicas: 4
+  storageSize: 1Gi
+  maxConn: 300
+  whitelist: # most of time , it's kubernetes Pod CIDR and Service CIDR
+    - "10.0.0.0/8"
+  extraConfigDir: /etc/my.cnf.d/
+  clusterUser: # user will create when mysql initialization
+    username: replication
+    password: cmVwbGljYXRpb25fcGFzc3dvcmQ=
+    databaseTarget: "*.*"
+    domain: "%"
+    privileges:
+    - "REPLICATION SLAVE"
+    - "REPLICATION CLIENT"
+    - "SELECT"
+    - "SUPER"
+  semiSync:
+    doubleMasterHA: true
+    
+  

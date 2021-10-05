@@ -1,6 +1,9 @@
 package mysqlbackup
 
 import (
+	"encoding/base64"
+	"net/url"
+	"strconv"
 	"strings"
 
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
@@ -16,9 +19,19 @@ type CronJobBuilder struct {
 
 func BuildSecret(cr *rdsv1alpha1.MysqlBackup) (secret *corev1.Secret) {
 	var hosts []string
+	var mysqlPort int
+	var s3SSLMode bool
+	var mysqlPassword []byte
+	var s3AccessKey []byte
+	var s3SecretAccessKey []byte
 
-	for _, v := range cr.Spec.Hosts {
-		hosts = append(hosts, v.Host)
+	for _, v := range cr.Spec.Address {
+		if v.Port > 1 {
+			mysqlPort = 3306
+		} else {
+			mysqlPort = v.Port
+		}
+		hosts = append(hosts, v.Host+":"+strconv.Itoa(mysqlPort))
 	}
 
 	secret = new(corev1.Secret)
@@ -28,22 +41,32 @@ func BuildSecret(cr *rdsv1alpha1.MysqlBackup) (secret *corev1.Secret) {
 		Labels:    BuildLabels(cr),
 	}
 
+	s3URL, _ := url.Parse(cr.Spec.S3.Endpoint)
+	if s3URL.Scheme == "https" {
+		s3SSLMode = true
+	}
+
+	mysqlPassword, _ = base64.StdEncoding.DecodeString(cr.Spec.Password)
+	s3AccessKey, _ = base64.StdEncoding.DecodeString(cr.Spec.S3.AccessKey)
+	s3SecretAccessKey, _ = base64.StdEncoding.DecodeString(cr.Spec.S3.SecretAccessKey)
+
 	secret.Data = make(map[string][]byte)
-	secret.Data["MYSQL_USER"] = []byte(cr.Spec.Username)
-	secret.Data["MYSQL_PASSWORD"] = []byte(cr.Spec.Password)
-	secret.Data["MYSQL_NODES"] = []byte(strings.Join(hosts, " "))
-	secret.Data["MYSQL_PORT"] = []byte("3306")
+	secret.Data["MYSQL_USERNAME"] = []byte(cr.Spec.Username)
+	secret.Data["MYSQL_PWD"] = mysqlPassword
+	secret.Data["MYSQL_ADDRESSES"] = []byte(strings.Join(hosts, ","))
 	secret.Data["MYSQL_CLUSTER_MODE"] = []byte(cr.Spec.ClusterMode)
-	secret.Data["S3_ENDPOINT"] = []byte(cr.Spec.S3.Endpoint)
+	secret.Data["S3_ENDPOINT"] = []byte(s3URL.Host)
+	secret.Data["S3_SSL"] = []byte(strconv.FormatBool(s3SSLMode))
 	secret.Data["S3_BUCKET"] = []byte(cr.Spec.S3.Bucket)
 	secret.Data["S3_PATH"] = []byte(strings.Trim(cr.Spec.S3.Path, "/"))
-	secret.Data["S3_ACCESS_KEY"] = []byte(cr.Spec.S3.AccessKey)
-	secret.Data["S3_SECURITY_KEY"] = []byte(cr.Spec.S3.SecurityKey)
+	secret.Data["S3_ACCESS_KEY"] = s3AccessKey
+	secret.Data["S3_SECRET_ACCESS_KEY"] = s3SecretAccessKey
+	secret.Data["LOCK_TABLE"] = []byte(strconv.FormatBool(cr.Spec.LockTable))
 
 	if cr.Spec.UseZlibCompress != nil && *cr.Spec.UseZlibCompress {
-		secret.Data["MYSQL_BACKUP_USE_ZLIB_COMPRESS"] = []byte("true")
+		secret.Data["BACKUP_USE_ZLIB"] = []byte("true")
 	} else {
-		secret.Data["MYSQL_BACKUP_USE_ZLIB_COMPRESS"] = []byte("false")
+		secret.Data["BACKUP_USE_ZLIB"] = []byte("false")
 	}
 
 	return
@@ -83,35 +106,11 @@ func (t *CronJobBuilder) buildJobSpec() (spec batchv1.JobSpec, err error) {
 		TTLSecondsAfterFinished: &ttlSeconds,
 		Template: corev1.PodTemplateSpec{
 			Spec: corev1.PodSpec{
-				InitContainers: []corev1.Container{t.buildInitContainer()},
-				Containers:     []corev1.Container{t.buildMainContainer()},
-				Volumes:        volumes,
-				RestartPolicy:  "OnFailure",
+				Containers:    []corev1.Container{t.buildMainContainer()},
+				Volumes:       volumes,
+				RestartPolicy: "OnFailure",
 			},
 		},
-	}
-	return
-}
-
-func (t *CronJobBuilder) buildInitContainer() (container corev1.Container) {
-	secret := BuildSecret(t.CR)
-	container = corev1.Container{
-		Name:    "backup",
-		Image:   t.CR.Spec.InitContainerImage,
-		Command: t.CR.Spec.InitContainerCommand,
-		Args:    t.CR.Spec.InitContainerArgs,
-		EnvFrom: []corev1.EnvFromSource{
-			{
-				SecretRef: &corev1.SecretEnvSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: secret.Name},
-				},
-			},
-		},
-		VolumeMounts: []corev1.VolumeMount{
-			{Name: "scripts", MountPath: "/scripts"},
-			{Name: "data", MountPath: "/data"},
-		},
-		Resources: t.CR.Spec.Resources,
 	}
 	return
 }
@@ -131,7 +130,6 @@ func (t *CronJobBuilder) buildMainContainer() (container corev1.Container) {
 			},
 		},
 		VolumeMounts: []corev1.VolumeMount{
-			{Name: "scripts", MountPath: "/scripts"},
 			{Name: "data", MountPath: "/data"},
 		},
 		Resources: t.CR.Spec.Resources,

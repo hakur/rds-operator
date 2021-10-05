@@ -1,0 +1,43 @@
+kind: MysqlBackup
+apiVersion: rds.hakurei.cn/v1alpha1
+metadata:
+  name: yuxing
+spec:
+  s3:
+    endpoint: http://192.168.1.4:9000
+    bucket: mysql-backup
+    accessKey: bWluaW9hZG1pbg==
+    secretAccessKey: bWluaW9hZG1pbg==
+    path: "/12"
+  timeZone: Asia/Shanghai
+  schedule: "*/1 * * * *"
+  clusterMode: MGRSP
+  image: rumia/rds-sidecar:inkube
+  storageSize: 1Gi
+  username: root
+  password: MTIzNDU2
+  command:
+  - sidecar
+  - mysql
+  - backup
+  # args:
+  # custom mysql-pump options
+  # - --mysql-pump="--k1=v2"
+  # - --mysql-pump="--k2=v2"
+  # - --mysql-pump="--k3"
+  # - --mysql-pump="--k4"
+  # useZlibCompress: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 100m
+      memory: 256Mi
+  address:
+  - host: yuxing-mysql-0
+    port: 3306
+  - host: yuxing-mysql-1
+    port: 3306
+  - host: yuxing-mysql-2
+    port: 3306
