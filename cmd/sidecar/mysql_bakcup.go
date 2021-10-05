@@ -8,6 +8,7 @@ import (
 
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
 	"github.com/hakur/rds-operator/pkg/mysql"
+	"github.com/hakur/rds-operator/util"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/sirupsen/logrus"
@@ -36,9 +37,9 @@ type MysqlBackupCommand struct {
 	// Password password used for backup operation,  password use env var MYSQL_PWD
 	Password string
 	// Charset backup output sql charset
-	Charset       string
-	Zlib          bool
-	SSLMode       bool
+	Charset string
+	Zlib    bool
+	//SSLMode       bool
 	StructureOnly bool
 	DumpCmd       bool
 	GlobalVar     *MysqlGlobalFlagValues
@@ -51,20 +52,20 @@ type MysqlBackupCommand struct {
 
 func (t *MysqlBackupCommand) Register(cmd *kingpin.CmdClause) {
 	cmd.Action(t.Action)
-	cmd.Flag("username", "mysql username used for backup operation, password use env var MYSQL_PWD").Default("root").StringVar(&t.Username)
-	cmd.Flag("password", "mysql password used for backup operation, password use env var MYSQL_PWD").Default("").StringVar(&t.Password)
-	cmd.Flag("charset", "backup output sql charset").Default("utf8").StringVar(&t.Charset)
-	cmd.Flag("zlib", "use zlib compress sql file").Default("false").BoolVar(&t.Zlib)
-	cmd.Flag("ssl", "use ssl mode connect mysql").Default("false").BoolVar(&t.SSLMode)
-	cmd.Flag("structure-only", "only dump table structure without table data dump").Default("false").BoolVar(&t.StructureOnly)
-	cmd.Flag("dump-cmd", "print mysql backup command").Default("true").BoolVar(&t.DumpCmd)
-	cmd.Flag("s3-bucket", "s3 bucket name").Default("mysql-backup").StringVar(&t.S3.Bucket)
-	cmd.Flag("s3-endpoint", "s3 server endpoint, such as 127.0.0.1 without schema and colon").Default("127.0.0.1:9000").StringVar(&t.S3.Endpoint)
-	cmd.Flag("s3-access-key", "s3 accessKey").Default("myAccessKey").StringVar(&t.S3.AccessKey)
-	cmd.Flag("s3-secret-access-key", "s3 secretAccessKey").Default("mySecretAccessKey").StringVar(&t.S3.SecretAccessKey)
-	cmd.Flag("s3-ssl", "s3 ssl connection mode").Default("false").BoolVar(&t.S3.SSL)
-	cmd.Flag("s3-path", "backup file path on s3").Default("default-mysql-cluster").StringVar(&t.S3.Path)
-	cmd.Flag("lock-table", "lock table when backup, if enabled, mysqlpump switch to single thread mode").Default("false").BoolVar(&t.LockTable)
+	cmd.Flag("username", "mysql username used for backup operation, env MYSQL_USERNAME").Default(util.EnvOrDefault("MYSQL_USERNAME", "root")).StringVar(&t.Username)
+	cmd.Flag("password", "mysql password used for backup operation, env MYSQL_PWD").Default(util.EnvOrDefault("MYSQL_PWD", "")).StringVar(&t.Password)
+	cmd.Flag("charset", "backup output sql charset, env MYSQL_CHARSET").Default(util.EnvOrDefault("MYSQL_CHARSET", "utf8")).StringVar(&t.Charset)
+	cmd.Flag("zlib", "use zlib compress sql file, env BACKUP_USE_ZLIB").Default(util.EnvOrDefault("BACKUP_USE_ZLIB", "false")).BoolVar(&t.Zlib)
+	//cmd.Flag("ssl", "use ssl mode connect mysql, env MYSQL_SSL").Default(util.EnvOrDefault("MYSQL_SSL", "false")).BoolVar(&t.SSLMode)
+	cmd.Flag("structure-only", "only dump table structure without table data dump,env BACKUP_STRUCTURE_ONLY").Default(util.EnvOrDefault("BACKUP_STRUCTURE_ONLY", "false")).BoolVar(&t.StructureOnly)
+	cmd.Flag("dump-cmd", "print mysql backup command,env DUMP_CMD").Default(util.EnvOrDefault("DUMP_CMD", "true")).BoolVar(&t.DumpCmd)
+	cmd.Flag("s3-bucket", "s3 bucket name,env S3_BUCKET").Default(util.EnvOrDefault("S3_BUCKET", "mysql-backup")).StringVar(&t.S3.Bucket)
+	cmd.Flag("s3-endpoint", "s3 server endpoint, such as 127.0.0.1 without schema and colon, env S3_ENDPOINT").Default(util.EnvOrDefault("S3_ENDPOINT", "127.0.0.1:9000")).StringVar(&t.S3.Endpoint)
+	cmd.Flag("s3-access-key", "s3 accessKey, env S3_ACCESS_KEY").Default(util.EnvOrDefault("S3_ACCESS_KEY", "myAccessKey")).StringVar(&t.S3.AccessKey)
+	cmd.Flag("s3-secret-access-key", "s3 secretAccessKey, env S3_SECRET_ACCESS_KEY").Default(util.EnvOrDefault("S3_SECRET_ACCESS_KEY", "mySecretAccessKey")).StringVar(&t.S3.SecretAccessKey)
+	cmd.Flag("s3-ssl", "s3 ssl connection mode, env S3_SSL").Default(util.EnvOrDefault("S3_SSL", "false")).BoolVar(&t.S3.SSL)
+	cmd.Flag("s3-path", "backup file path on s3, env S3_PATH").Default(util.EnvOrDefault("S3_PATH", "default-mysql-cluster")).StringVar(&t.S3.Path)
+	cmd.Flag("lock-table", "lock table when backup, if enabled, mysqlpump switch to single thread mode,env LOCK_TABLE").Default(util.EnvOrDefault("LOCK_TABLE", "false")).BoolVar(&t.LockTable)
 	cmd.Flag("mysql-pump", "other custom mysqlpump options to override built-in mysqlpump options").StringsVar(&t.MysqlPump)
 }
 
@@ -118,9 +119,9 @@ func (t *MysqlBackupCommand) Action(ctx *kingpin.ParseContext) (err error) {
 		cmdArgs = append(cmdArgs, "--compress-output=zlib")
 	}
 
-	if t.SSLMode {
-		cmdArgs = append(cmdArgs, "--ssl-mode")
-	}
+	// if t.SSLMode {
+	// 	cmdArgs = append(cmdArgs, "--ssl-mode")
+	// }
 
 	if t.StructureOnly {
 		cmdArgs = append(cmdArgs, "--skip-dump-rows")
@@ -150,11 +151,13 @@ func (t *MysqlBackupCommand) Action(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	logrus.Info("uploading ", t.S3.Path+"/"+backupFileName, " to s3 server ...")
-	_, err = minioClient.PutObject(execCtx, t.S3.Bucket, t.S3.Path+"/"+backupFileName, pipe, -1, minio.PutObjectOptions{})
+	if _, err = minioClient.PutObject(execCtx, t.S3.Bucket, t.S3.Path+"/"+backupFileName, pipe, -1, minio.PutObjectOptions{}); err != nil {
+		logrus.WithField("err", err.Error()).Fatal("backup failed")
+	}
 	if err = cmd.Wait(); err != nil {
 		logrus.WithField("err", err.Error()).Fatal("backup failed")
 	}
-	logrus.Info("uploading ", t.S3.Path+"/"+backupFileName, " to s3 server success")
+	logrus.Info("upload ", t.S3.Path+"/"+backupFileName, " to s3 server success")
 
 	return err
 }

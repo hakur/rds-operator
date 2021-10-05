@@ -111,6 +111,13 @@ endef
 
 #########################################################################################################################
 
+sidecar-dev:
+	go build -o sidecar cmd/sidecar/*.go
+
+	docker build -t $(SIDECAR_IMG) \
+	--build-arg Version=$(BRANCH) \
+	--build-arg Commit=$(COMMIT) \
+	-f assets/docker/sidecar/Dockerfile.dev .
 
 sidecar:
 	docker build -t $(SIDECAR_IMG) \

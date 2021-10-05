@@ -11,7 +11,7 @@ import (
 
 type MysqlGlobalFlagValues struct {
 	// Addresses (host|ip:port) string, splited by comma
-	Addresses []string
+	Addresses string
 	// Mode mysql cluster mode
 	Mode string
 	// SemiSyncDoubleMasterHA is cluster under semi sync replication mode, and there need two master node join each other
@@ -30,7 +30,7 @@ func (t *MysqlCommand) Register() {
 	mysqlCmd := kingpin.Command("mysql", "mysql tools")
 
 	mysqlCmd.Flag("cluster-mode", "mysql cluster mode").Default(util.EnvOrDefault("MYSQL_CLUSTER_MODE", "MGRSP")).EnumVar(&t.GlobalVar.Mode, "MGRSP", "MGRMP", "SemiSync")
-	mysqlCmd.Flag("address", "mysql address ,(host|ip):port string, use '--address=127.0.0.1:3306 --address=127.0.0.1:3307 --address=127.0.0.1:3308' for multiple addresses").StringsVar(&t.GlobalVar.Addresses)
+	mysqlCmd.Flag("addresses", "mysql address ,(host|ip):port string, use '--addresses=127.0.0.1:3306,127.0.0.1:3307,127.0.0.1:3308' for multiple addresses").Default(util.EnvOrDefault("MYSQL_ADDRESSES", "127.0.0.1:3306,127.0.0.1:3307,127.0.0.1:3308")).StringVar(&t.GlobalVar.Addresses)
 	mysqlCmd.Flag("semi-sync-double-master-ha", "is cluster under semi sync replication mode, and there need two master node join each other").Default(util.EnvOrDefault("SEMI_SYNC_DOUBLE_MASTER_HA", "false")).BoolVar(&t.GlobalVar.SemiSyncDoubleMasterHA)
 	mysqlCmd.Flag("version", "mysql server version").Default(util.EnvOrDefault("MYSQL_VERSION", "5.7.34")).StringVar(&t.GlobalVar.MysqlVersion)
 
@@ -39,10 +39,11 @@ func (t *MysqlCommand) Register() {
 }
 
 // AddressesToDSN convert host/ip:port to dsn list
-func AddressesToDSN(addresses []string) (data []*mysql.DSN) {
+func AddressesToDSN(addresses string) (data []*mysql.DSN) {
 	var host string
 	var port int
-	for _, address := range addresses {
+
+	for _, address := range strings.Split(addresses, ",") {
 		arr := strings.Split(address, ":")
 		if len(arr) > 1 {
 			host = arr[0]
@@ -61,5 +62,6 @@ func AddressesToDSN(addresses []string) (data []*mysql.DSN) {
 			Port: port,
 		})
 	}
+
 	return
 }

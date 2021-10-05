@@ -24,15 +24,9 @@ testbin/*
 *.swo
 *~
 
-rds-operator
-rds-operator.exe
+/sidecar
+/sidecar.exe
+/rds-operator
+/rds-operator.exe
 
-cmd/mysql-sidecar/mysql-sidecar
-cmd/mysql-sidecar/mysql-sidecar.exe
-
-docker/sidecar/sidecar
-docker/sidecar/sidecar.exe
-
-docker/mysql-config/mysql-config
-
-release
+/release

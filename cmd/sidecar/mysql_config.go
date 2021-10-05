@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -87,13 +88,15 @@ func (t *MysqlConfigCommand) Action(ctx *kingpin.ParseContext) (err error) {
 
 func (t *MysqlConfigCommand) mgrspConfig() (fileContent string, err error) {
 	var seeds string
-	for _, v := range t.GlobalVar.Addresses {
-		host := strings.Split(v, ":")[0]
-		seeds += host + ":33061,"
+	for _, v := range AddressesToDSN(t.GlobalVar.Addresses) {
+		seeds += v.Host + ":33061,"
 	}
 	seeds = strings.Trim(seeds, ",")
 
 	writer := mysql.NewConfigParser()
+	if err = writer.Parse(strings.NewReader(BasicConf)); err != nil {
+		return fileContent, fmt.Errorf("parse base mysql conf failed, err -> %s", err.Error())
+	}
 	mysqld := mysql.NewConfigSection("mysqld")
 
 	mysqld.Set("plugin_load_add", "group_replication.so")
@@ -115,7 +118,7 @@ func (t *MysqlConfigCommand) mgrspConfig() (fileContent string, err error) {
 	mysqld.Set("server-id", strconv.Itoa(getMysqlServerID()))
 	mysqld.Set("log_slave_updates", "ON")
 
-	writer.SetSection(mysqld)
+	writer.MergeSection(mysqld)
 	// merge extra config
 	if err := writer.ParseFile(util.EnvOrDefault("MYSQL_CFG_EXTRA_DIR", "/etc/my.cnf.d") + "/extra_config"); err != nil && !os.IsNotExist(err) {
 		return fileContent, err
@@ -126,13 +129,15 @@ func (t *MysqlConfigCommand) mgrspConfig() (fileContent string, err error) {
 
 func (t *MysqlConfigCommand) mgrmpConfig() (fileContent string, err error) {
 	var seeds string
-	for _, v := range t.GlobalVar.Addresses {
-		host := strings.Split(v, ":")[0]
-		seeds += host + ":33061,"
+	for _, v := range AddressesToDSN(t.GlobalVar.Addresses) {
+		seeds += v.Host + ":33061,"
 	}
 	seeds = strings.Trim(seeds, ",")
 
 	writer := mysql.NewConfigParser()
+	if err = writer.Parse(strings.NewReader(BasicConf)); err != nil {
+		return fileContent, fmt.Errorf("parse base mysql conf failed, err -> %s", err.Error())
+	}
 	mysqld := mysql.NewConfigSection("mysqld")
 
 	mysqld.Set("plugin_load_add", "group_replication.so")
@@ -154,7 +159,7 @@ func (t *MysqlConfigCommand) mgrmpConfig() (fileContent string, err error) {
 	mysqld.Set("server-id", strconv.Itoa(getMysqlServerID()))
 	mysqld.Set("log_slave_updates", "ON")
 
-	writer.SetSection(mysqld)
+	writer.MergeSection(mysqld)
 	// merge extra config
 	if err := writer.ParseFile("/etc/my.cnf.d/extra_config"); err != nil && !os.IsNotExist(err) {
 		return fileContent, err
@@ -165,6 +170,9 @@ func (t *MysqlConfigCommand) mgrmpConfig() (fileContent string, err error) {
 
 func (t *MysqlConfigCommand) semiSyncConfig() (fileContent string, err error) {
 	writer := mysql.NewConfigParser()
+	if err = writer.Parse(strings.NewReader(BasicConf)); err != nil {
+		return fileContent, fmt.Errorf("parse base mysql conf failed, err -> %s", err.Error())
+	}
 	mysqld := mysql.NewConfigSection("mysqld")
 	mysqld.Set("plugin_load_add", "semisync_master.so;semisync_slave.so")
 	mysqld.Set("master_info_repository", "TABLE")
@@ -178,7 +186,7 @@ func (t *MysqlConfigCommand) semiSyncConfig() (fileContent string, err error) {
 		mysqld.Set("auto_increment_increment ", "2")
 	}
 
-	writer.SetSection(mysqld)
+	writer.MergeSection(mysqld)
 	// merge extra config
 	if err := writer.ParseFile("/etc/my.cnf.d/extra_config"); err != nil && !os.IsNotExist(err) {
 		return fileContent, err

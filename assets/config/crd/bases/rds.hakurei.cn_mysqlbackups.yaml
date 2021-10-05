@@ -897,16 +897,6 @@ spec:
                 description: ImagePullPolicy all pods image pull policy，value should
                   keep with corev1.PullPolicy
                 type: string
-              initContainerArgs:
-                items:
-                  type: string
-                type: array
-              initContainerCommand:
-                items:
-                  type: string
-                type: array
-              initContainerImage:
-                type: string
               livenessProbe:
                 description: 'Periodic probe of container liveness. Container will
                   be restarted if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
@@ -1034,6 +1024,9 @@ spec:
                     format: int32
                     type: integer
                 type: object
+              lockTable:
+                description: LockTable lock table when backup
+                type: boolean
               password:
                 description: Password password of all mysql hosts, used for this backup
                   operation
@@ -1235,14 +1228,14 @@ spec:
                     type: string
                   path:
                     type: string
-                  securityKey:
+                  secretAccessKey:
                     type: string
                 required:
                 - accessKey
                 - bucket
                 - endpoint
                 - path
-                - securityKey
+                - secretAccessKey
                 type: object
               schedule:
                 description: Schedule k8s/linux cronjob schedule
@@ -1331,18 +1324,11 @@ spec:
                     description: Password http basic auth username
                     type: string
                 required:
-                - deleteResource
-                - headers
-                - password
                 - url
-                - username
                 type: object
             required:
             - clusterMode
             - image
-            - initContainerArgs
-            - initContainerCommand
-            - initContainerImage
             - password
             - schedule
             - storageSize

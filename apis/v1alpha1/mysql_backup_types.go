@@ -6,11 +6,11 @@ import (
 
 // S3Config aws s3 object storage server config
 type S3Config struct {
-	AccessKey   string `json:"accessKey"`
-	SecurityKey string `json:"securityKey"`
-	Endpoint    string `json:"endpoint"`
-	Bucket      string `json:"bucket"`
-	Path        string `json:"path"`
+	AccessKey       string `json:"accessKey"`
+	SecretAccessKey string `json:"secretAccessKey"`
+	Endpoint        string `json:"endpoint"`
+	Bucket          string `json:"bucket"`
+	Path            string `json:"path"`
 }
 
 // MysqlHost mysql back server connection settings
@@ -40,20 +40,6 @@ type BackupWebHookPostData struct {
 	SourceServer string `json:"sourceServer"`
 }
 
-type MysqlBackupWebhook struct {
-	// URL http request url
-	URL string `json:"url"`
-	// Password http basic auth username
-	Username string `json:"username"`
-	// Password http basic auth password
-	Password string `json:"password"`
-	// Headers http header fields, set cookie or some bearToken in this filed
-	Headers map[string]string `json:"headers"`
-	// DeleteResource if this field value is true, webhook post return http response code 200 and content is "ok", then delete MysqlBackup Custom Resource
-	// when backup job type is cronjob , must set this field value to false
-	DeleteResource bool `json:"deleteResource"`
-}
-
 // MysqlBackupSpec defines the desired state of Mysql
 type MysqlBackupSpec struct {
 	CommonField `json:",inline"`
@@ -72,15 +58,14 @@ type MysqlBackupSpec struct {
 	// Password password of all mysql hosts, used for this backup operation
 	Password string `json:"password"`
 	// Schedule k8s/linux cronjob schedule
-	Schedule             string   `json:"schedule"`
-	InitContainerCommand []string `json:"initContainerCommand"`
-	InitContainerArgs    []string `json:"initContainerArgs"`
-	InitContainerImage   string   `json:"initContainerImage"`
+	Schedule string `json:"schedule"`
 	// UseZlibCompress use zlib compress for mysqlpump command
 	// how to extra zlib compressed mysql backup file, see ???
 	UseZlibCompress *bool `json:"useZlibCompress,omitempty"`
 	// Webhook send backup file info POST to webhook url
-	Webhook MysqlBackupWebhook `json:"webhook,omitempty"`
+	Webhook *Webhook `json:"webhook,omitempty"`
+	// LockTable lock table when backup
+	LockTable bool `json:"lockTable,omitempty"`
 }
 
 // MysqlBackupStatus defines the observed state of Mysql
