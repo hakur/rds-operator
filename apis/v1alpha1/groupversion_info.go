@@ -76,17 +76,3 @@ type CommonField struct {
 	// if this field value is zero, pvc will alive forever
 	PVCRetentionSeconds *int `json:"pvcRetentionSeconds,omitempty"`
 }
-
-type Webhook struct {
-	// URL http request url
-	URL string `json:"url"`
-	// Password http basic auth username
-	Username string `json:"username,omitempty"`
-	// Password http basic auth password
-	Password string `json:"password,omitempty"`
-	// Headers http header fields, set cookie or some bearToken in this filed
-	Headers map[string]string `json:"headers,omitempty"`
-	// DeleteResource if this field value is true, webhook post return http response code 200 and content is "ok", then delete MysqlBackup Custom Resource
-	// when backup job type is cronjob , must set this field value to false
-	DeleteResource bool `json:"deleteResource,omitempty"`
-}

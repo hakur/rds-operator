@@ -4,11 +4,11 @@ metadata:
   name: yuxing
 spec:
   imagePullPolicy: IfNotPresent
-  rootPassword: MTIzNDU2
+  rootPassword: "zerocube"
   clusterMode: MGRSP
   storageClassName: hostpath
   timeZone: Asia/Shanghai
-  configImage: rumia/rds-sidecar:inkube
+  configImage: rumia/rds-sidecar
   image: mysql/mysql-server:5.7.34
   replicas: 3
   storageSize: 1Gi

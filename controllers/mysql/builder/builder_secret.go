@@ -15,18 +15,13 @@ func BuildSecret(cr *rdsv1alpha1.Mysql) (secret *corev1.Secret) {
 	var seeds string
 	var semiSyncMasters string
 	var semiSyncDoubleMaster bool
-	var rootPassword []byte
 	mysqlMaxConn := "300"
 	if cr.Spec.MaxConn != nil {
 		mysqlMaxConn = strconv.Itoa(*cr.Spec.MaxConn)
 	}
 
-	if cr.Spec.RootPassword != nil {
-		rootPassword, _ = base64.StdEncoding.DecodeString(*cr.Spec.RootPassword)
-	}
-
 	for i := 0; i < int(*cr.Spec.Replicas); i++ {
-		mysqlhost := cr.Name + "-mysql-" + strconv.Itoa(i) + ","
+		mysqlhost := cr.Name + "-mysql-" + strconv.Itoa(i) + " "
 		seeds += mysqlhost
 
 		if i == 0 {
@@ -38,8 +33,8 @@ func BuildSecret(cr *rdsv1alpha1.Mysql) (secret *corev1.Secret) {
 			semiSyncMasters += mysqlhost
 		}
 	}
-	seeds = strings.Trim(seeds, ",")
-	semiSyncMasters = strings.Trim(semiSyncMasters, ",")
+	seeds = strings.Trim(seeds, " ")
+	semiSyncMasters = strings.Trim(semiSyncMasters, " ")
 
 	secret = new(corev1.Secret)
 	secret.APIVersion = "v1"
@@ -50,13 +45,13 @@ func BuildSecret(cr *rdsv1alpha1.Mysql) (secret *corev1.Secret) {
 
 	secret.Data = map[string][]byte{
 		"TZ":                   []byte(cr.Spec.TimeZone),
-		"MYSQL_ROOT_PASSWORD":  rootPassword,
+		"MYSQL_ROOT_PASSWORD":  []byte(*cr.Spec.RootPassword),
 		"MYSQL_DATA_DIR":       []byte("/var/lib/mysql"),
 		"MYSQL_CLUSTER_MODE":   []byte(string(cr.Spec.ClusterMode)),
 		"MYSQL_CFG_MAX_CONN":   []byte(mysqlMaxConn),
 		"MYSQL_CFG_WHITE_LIST": []byte(strings.Join(cr.Spec.Whitelist, ",")),
 		"MYSQL_ROOT_HOST":      []byte("%"),
-		"MYSQL_ADDRESSES":      []byte(seeds),
+		"MYSQL_NODES":          []byte(seeds),
 	}
 
 	if cr.Spec.ClusterMode == rdsv1alpha1.ModeSemiSync {

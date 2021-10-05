@@ -9,8 +9,6 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-
-	"github.com/jinzhu/copier"
 )
 
 func NewConfigParser() (t *ConfigParser) {
@@ -73,21 +71,6 @@ func (t *ConfigParser) SetSection(section *ConfigSection) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 	t.Data[section.Name] = section
-}
-
-func (t *ConfigParser) MergeSection(section *ConfigSection) (err error) {
-	t.lock.Lock()
-	defer t.lock.Unlock()
-	nowSection, ok := t.Data[section.Name]
-	if !ok {
-		t.Data[section.Name] = section
-		return nil
-	}
-	if err = copier.CopyWithOption(nowSection, section, copier.Option{DeepCopy: true}); err != nil {
-		return err
-	}
-	t.Data[section.Name] = nowSection
-	return nil
 }
 
 func (t *ConfigParser) GetSection(sectionName string) (section *ConfigSection, err error) {

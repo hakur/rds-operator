@@ -38,20 +38,6 @@ spec:
           spec:
             description: MysqlBackupSpec defines the desired state of Mysql
             properties:
-              address:
-                description: Mysql host for backup
-                items:
-                  description: MysqlHost mysql back server connection settings
-                  properties:
-                    host:
-                      type: string
-                    port:
-                      type: integer
-                  required:
-                  - host
-                  - port
-                  type: object
-                type: array
               affinity:
                 description: If specified, the pod's scheduling constraints
                 properties:
@@ -897,6 +883,16 @@ spec:
                 description: ImagePullPolicy all pods image pull policy，value should
                   keep with corev1.PullPolicy
                 type: string
+              initContainerArgs:
+                items:
+                  type: string
+                type: array
+              initContainerCommand:
+                items:
+                  type: string
+                type: array
+              initContainerImage:
+                type: string
               livenessProbe:
                 description: 'Periodic probe of container liveness. Container will
                   be restarted if the probe fails. Cannot be updated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
@@ -1024,9 +1020,20 @@ spec:
                     format: int32
                     type: integer
                 type: object
-              lockTable:
-                description: LockTable lock table when backup
-                type: boolean
+              mysql:
+                description: Mysql host for backup
+                items:
+                  description: MysqlHost mysql back server connection settings
+                  properties:
+                    host:
+                      type: string
+                    port:
+                      type: integer
+                  required:
+                  - host
+                  - port
+                  type: object
+                type: array
               password:
                 description: Password password of all mysql hosts, used for this backup
                   operation
@@ -1228,14 +1235,14 @@ spec:
                     type: string
                   path:
                     type: string
-                  secretAccessKey:
+                  securityKey:
                     type: string
                 required:
                 - accessKey
                 - bucket
                 - endpoint
                 - path
-                - secretAccessKey
+                - securityKey
                 type: object
               schedule:
                 description: Schedule k8s/linux cronjob schedule
@@ -1301,34 +1308,13 @@ spec:
                 type: string
               webhook:
                 description: Webhook send backup file info POST to webhook url
-                properties:
-                  deleteResource:
-                    description: DeleteResource if this field value is true, webhook
-                      post return http response code 200 and content is "ok", then
-                      delete MysqlBackup Custom Resource when backup job type is cronjob
-                      , must set this field value to false
-                    type: boolean
-                  headers:
-                    additionalProperties:
-                      type: string
-                    description: Headers http header fields, set cookie or some bearToken
-                      in this filed
-                    type: object
-                  password:
-                    description: Password http basic auth password
-                    type: string
-                  url:
-                    description: URL http request url
-                    type: string
-                  username:
-                    description: Password http basic auth username
-                    type: string
-                required:
-                - url
-                type: object
+                type: string
             required:
             - clusterMode
             - image
+            - initContainerArgs
+            - initContainerCommand
+            - initContainerImage
             - password
             - schedule
             - storageSize

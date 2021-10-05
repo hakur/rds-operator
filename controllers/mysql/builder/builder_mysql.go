@@ -33,7 +33,34 @@ func (t *MysqlBuilder) BuildMyCnfCM(cr *rdsv1alpha1.Mysql) (cm *corev1.ConfigMap
 
 	cnfContent := `
 [client]
+socket=/tmp/mysql.sock
 [mysqld]
+skip-name-resolve
+socket=/tmp/mysql.sock
+secure-file-priv=/var/lib/mysql-files
+user=mysql
+symbolic-links=0
+pid-file=/var/run/mysqld/mysqld.pid
+default-storage-engine=INNODB
+character-set-server=utf8
+collation-server=utf8_general_ci
+transaction_isolation=READ-COMMITTED
+
+gtid_mode=ON
+enforce-gtid-consistency=true
+
+sync_binlog=1
+log_bin=bin.log
+binlog_format=row
+binlog_gtid_simple_recovery=1
+
+relay_log=relay.log
+relay_log_recovery=1
+relay_log_info_repository=TABLE
+master_info_repository=TABLE
+binlog_checksum=NONE
+
+slave_skip_errors=ddl_exist_errors
 
 !includedir ` + cnfDir
 	cm.Data = map[string]string{

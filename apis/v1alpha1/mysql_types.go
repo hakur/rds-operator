@@ -54,7 +54,7 @@ type MysqlUser struct {
 // MysqlSpec defines the desired state of Mysql
 type MysqlSpec struct {
 	CommonField `json:",inline"`
-	// ClusterMode mysql cluster mode,values are [ MGRMP MGRSP SemiSync ]
+	// ClusterMode mysql cluster mode,values are [ MGRMP MGRSP SemiSync Async ]
 	ClusterMode ClusterMode `json:"clusterMode"`
 	// RootPassword mysql root password, if empty, an will allow empty password login
 	RootPassword *string `json:"rootPassword,omitempty"`

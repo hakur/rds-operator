@@ -4,7 +4,7 @@ metadata:
   name: semisync
 spec:
   imagePullPolicy: IfNotPresent
-  rootPassword: "123456"
+  rootPassword: "zerocube"
   clusterMode: SemiSync
   storageClassName: hostpath
   timeZone: Asia/Shanghai
