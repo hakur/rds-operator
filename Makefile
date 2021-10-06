@@ -131,9 +131,20 @@ operator:
 	-f assets/docker/operator/Dockerfile .
 yaml:
 	rm -rf release
-	mkdir release
-	cd assets/config/manager && $(KUSTOMIZE) edit set image controller=rumia/rds-operator:${BRANCH}
-	$(KUSTOMIZE) build assets/config/default > release/operator.yaml
+	mkdir -p release/operator
+	cd assets/config/operator && $(KUSTOMIZE) edit set image operator=rumia/rds-operator:${BRANCH}
+	
+	$(KUSTOMIZE) build assets/config/operator > release/operator/operator.yaml
+	$(KUSTOMIZE) build assets/config/crd > release/operator/crd.yaml
+	$(KUSTOMIZE) build assets/config/rbac > release/operator/rbac.yaml
+	$(KUSTOMIZE) build assets/config/prometheus > release/operator/prometheus.yaml
+
+	cp -r assets/examples release/examples
+
+	sed -i 's/rumia\/rds-sidecar.*/rumia\/rds-sidecar:$(BRANCH)/g' release/examples/*.yaml
+
+	rm -rf release/examples/kafka.yaml
+	rm -rf release/examples/proxysql.yaml
 
 gen: generate manifests install
 	cd hack && ./update-codegen.sh

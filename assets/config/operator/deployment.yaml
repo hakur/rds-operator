@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rds-opertor
+  labels:
+    k8s-app: rds-opertor
+spec:
+  selector:
+    matchLabels:
+      k8s-app: rds-opertor
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        k8s-app: rds-opertor
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+      - name: proxy
+        # image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0
+        image: kubesphere/kube-rbac-proxy:v0.8.0
+        args:
+        - "--secure-listen-address=0.0.0.0:8443"
+        - "--upstream=http://127.0.0.1:8080/"
+        - "--logtostderr=true"
+        - "--v=10"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 100m
+            memory: 256Mi
+      - name: operator
+        image: operator # rumia/rds-operator:latest
+        command:
+        - /rds-operator
+        args:
+        - --leader-elect
+        securityContext:
+          allowPrivilegeEscalation: false
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 200m
+            memory: 256Mi
+      serviceAccountName: rds-operator
+      terminationGracePeriodSeconds: 10
