@@ -14,8 +14,8 @@ spec:
       labels:
         k8s-app: rds-opertor
     spec:
-      securityContext:
-        runAsNonRoot: true
+      # securityContext:
+      #   runAsNonRoot: true
       containers:
       - name: proxy
         # image: gcr.io/kubebuilder/kube-rbac-proxy:v0.8.0

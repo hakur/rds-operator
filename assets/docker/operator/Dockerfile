@@ -25,6 +25,7 @@ RUN go build -ldflags "-s -w -X github.com/hakur/rds-operator/pkg/types.Version=
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 # FROM gcr.io/distroless/static:nonroot
+# FROM rumia/distroless-static:nonroot
 FROM ubuntu:20.04
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt update

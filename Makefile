@@ -146,6 +146,8 @@ yaml:
 	rm -rf release/examples/kafka.yaml
 	rm -rf release/examples/proxysql.yaml
 
+	tar -czf release/yaml.tar.gz release/examples release/operator
+
 gen: generate manifests install
 	cd hack && ./update-codegen.sh
 	
@@ -157,6 +159,11 @@ skaffold:
 	go build -ldflags "-s -w -X github.com/hakur/rds-operator/pkg/types.Version=$(BRANCH) -X github.com/hakur/rds-operator/pkg/types.Commit=$(COMMIT)" -o rds-operator cmd/operator/main.go
 	skaffold dev --port-forward=user,services --tail
 
+# make relase BRANCH=${version tag} PUSH=true
 release: yaml operator sidecar # make release pack
+ifeq ($(PUSH),true)
+	docker push $(SIDECAR_IMG)
+	docker push $(OPERATOR_IMG)
+endif
 #	cp -r -t release apis assets cmd controllers config docs pkg util Makefile Readme.md skaffold.yaml
 	

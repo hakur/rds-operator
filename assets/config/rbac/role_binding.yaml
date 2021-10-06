@@ -9,4 +9,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: rds-opertor
-  namespace: system
+  namespace: kube-system
