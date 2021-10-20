@@ -2,13 +2,13 @@ package mysql
 
 import (
 	"context"
-	"encoding/base64"
 	"reflect"
 	"strconv"
 	"strings"
 
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
 	"github.com/hakur/rds-operator/pkg/mysql"
+	"github.com/hakur/util"
 	"github.com/sirupsen/logrus"
 )
 
@@ -20,7 +20,7 @@ func GetMysqlHosts(cr *rdsv1alpha1.Mysql) (hosts []string) {
 }
 
 func GetMysqlDataSources(cr *rdsv1alpha1.Mysql) (ds []*mysql.DSN) {
-	mysqlPassword, _ := base64.StdEncoding.DecodeString(cr.Spec.ClusterUser.Password)
+	mysqlPassword := util.Base64Decode(cr.Spec.ClusterUser.Password)
 	for _, v := range GetMysqlHosts(cr) {
 		ds = append(ds, &mysql.DSN{
 			Host:     v + "." + cr.Namespace,

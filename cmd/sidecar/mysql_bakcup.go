@@ -9,6 +9,7 @@ import (
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
 	"github.com/hakur/rds-operator/pkg/mysql"
 	"github.com/hakur/rds-operator/util"
+	hutil "github.com/hakur/util"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/sirupsen/logrus"
@@ -53,7 +54,7 @@ type MysqlBackupCommand struct {
 func (t *MysqlBackupCommand) Register(cmd *kingpin.CmdClause) {
 	cmd.Action(t.Action)
 	cmd.Flag("username", "mysql username used for backup operation, env MYSQL_USERNAME").Default(util.EnvOrDefault("MYSQL_USERNAME", "root")).StringVar(&t.Username)
-	cmd.Flag("password", "mysql password used for backup operation, env MYSQL_PWD").Default(util.EnvOrDefault("MYSQL_PWD", "")).StringVar(&t.Password)
+	cmd.Flag("password", "mysql password used for backup operation, env MYSQL_PWD").Default(hutil.Base64Decode(util.EnvOrDefault("MYSQL_PWD", ""))).StringVar(&t.Password)
 	cmd.Flag("charset", "backup output sql charset, env MYSQL_CHARSET").Default(util.EnvOrDefault("MYSQL_CHARSET", "utf8")).StringVar(&t.Charset)
 	cmd.Flag("zlib", "use zlib compress sql file, env BACKUP_USE_ZLIB").Default(util.EnvOrDefault("BACKUP_USE_ZLIB", "false")).BoolVar(&t.Zlib)
 	//cmd.Flag("ssl", "use ssl mode connect mysql, env MYSQL_SSL").Default(util.EnvOrDefault("MYSQL_SSL", "false")).BoolVar(&t.SSLMode)

@@ -8,7 +8,7 @@ spec:
   clusterMode: MGRSP
   storageClassName: hostpath
   timeZone: Asia/Shanghai
-  configImage: rumia/rds-sidecar:inkube
+  configImage: rumia/rds-sidecar:v0.0.1
   image: mysql/mysql-server:5.7.34
   replicas: 3
   storageSize: 1Gi
@@ -26,6 +26,7 @@ spec:
     - "REPLICATION CLIENT"
     - "SELECT"
     - "SUPER"
+    - "USAGE"
     
     # readinessProbe:
     #   exec:

@@ -5,6 +5,7 @@ import (
 )
 
 // ProxySQLSpec defines the desired state of ProxySQL
+// mysql 8 admin-hash_passwords=false https://www.cnblogs.com/9527l/p/12435675.html https://kitcharoenp.github.io/mysql/2020/07/18/proxysql2_backend_users_config.html https://www.jianshu.com/p/e22b149ba270
 type ProxySQLSpec struct {
 	CommonField `json:",inline"`
 	// StorageClassName all pods storage class name
@@ -13,15 +14,27 @@ type ProxySQLSpec struct {
 	MysqlVersion string `json:"mysqlVersion"`
 	// NodePort  nodeport of proxysql service
 	// if this value is nil, means no nodePort should be open
-	// if this value is zero,means open random nodePort
-	// if this value is zero,means open a specific nodePort
+	// if this value is zero, means open random nodePort
+	// if this value is greater than zero, means open a specific nodePort
 	NodePort *int32 `json:"nodePort"`
 	// Replicas proxysql pod total count,contains master and slave
 	Replicas *int32 `json:"replicas,omitempty"`
 	// StorageSize pvc disk size
 	StorageSize string `json:"storageSize"`
-	// ConfigImage mysql initContainer for render mysql/proxysql config and boostrap mysql cluster
+	// ConfigImage proxysql initContainer for render proxysql config
 	ConfigImage string `json:"configImage"`
+
+	// Mysql mysql backend servers with host:port list
+	Mysqls        []MysqlHost           `json:"mysqls"`
+	BackendUsers  []MysqlSimpleUserInfo `json:"backendUsers"`
+	FrontendUsers []MysqlUser           `json:"frontedUsers"`
+	AdminUser     MysqlSimpleUserInfo   `json:"adminUser"`
+	ClusterUser   MysqlSimpleUserInfo   `json:"clusterUser"`
+	MonitorUser   MysqlSimpleUserInfo   `json:"monitorUser"`
+	// ClusterMode mysql cluster mode
+	ClusterMode ClusterMode `json:"clusterMode"`
+	// MysqlMaxConn max connections per mysql instance
+	MysqlMaxConn int `json:"mysqlMaxConn"`
 }
 
 // ProxySQLStatus defines the observed state of ProxySQL

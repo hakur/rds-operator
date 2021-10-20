@@ -12,5 +12,6 @@ func init() {
 }
 func main() {
 	new(MysqlCommand).Register()
+	new(ProxySQLCommand).Register()
 	kingpin.Parse()
 }

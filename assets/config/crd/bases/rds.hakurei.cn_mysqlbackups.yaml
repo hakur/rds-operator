@@ -1031,18 +1031,6 @@ spec:
                 description: Password password of all mysql hosts, used for this backup
                   operation
                 type: string
-              pod:
-                description: Pod pod settings
-                properties:
-                  annotations:
-                    additionalProperties:
-                      type: string
-                    type: object
-                  labels:
-                    additionalProperties:
-                      type: string
-                    type: object
-                type: object
               priorityClassName:
                 description: PriorityClassName pod priority class name for all pods
                   under CR resource

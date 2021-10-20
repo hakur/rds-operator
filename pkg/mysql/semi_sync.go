@@ -191,7 +191,7 @@ func (t *SemiSync) getMyMaster(ctx context.Context, dbConn *sql.DB) (masterHost 
 	cols, _ := result.Columns()
 	buff := make([]interface{}, len(cols))
 	data := make([]string, len(cols))
-	for i, _ := range buff {
+	for i := range buff {
 		buff[i] = &data[i]
 	}
 

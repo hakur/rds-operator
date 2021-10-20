@@ -1,5 +1,5 @@
-BRANCH := $(shell git for-each-ref --format='%(objectname) %(refname:short)' refs/heads | awk "/^$$(git rev-parse HEAD)/ {print \$$2}")
-COMMIT := $(shell git rev-parse HEAD)
+BRANCH = `git rev-parse --abbrev-ref HEAD`
+COMMIT = `git rev-parse --short HEAD`
 # Image URL to use all building/pushing image targets
 OPERATOR_IMG ?= rumia/rds-operator:$(BRANCH)
 SIDECAR_IMG ?= rumia/rds-sidecar:$(BRANCH)
@@ -144,7 +144,6 @@ yaml:
 	sed -i 's/rumia\/rds-sidecar.*/rumia\/rds-sidecar:$(BRANCH)/g' release/examples/*.yaml
 
 	rm -rf release/examples/kafka.yaml
-	rm -rf release/examples/proxysql.yaml
 
 	tar -czf release/yaml.tar.gz release/examples release/operator
 

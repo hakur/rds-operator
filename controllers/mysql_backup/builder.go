@@ -1,12 +1,13 @@
 package mysqlbackup
 
 import (
-	"encoding/base64"
 	"net/url"
 	"strconv"
 	"strings"
 
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
+	"github.com/hakur/util"
+	"github.com/jinzhu/copier"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -36,9 +37,10 @@ func BuildSecret(cr *rdsv1alpha1.MysqlBackup) (secret *corev1.Secret) {
 
 	secret = new(corev1.Secret)
 	secret.ObjectMeta = metav1.ObjectMeta{
-		Name:      cr.Name + "-backup-secret",
-		Namespace: cr.Namespace,
-		Labels:    BuildLabels(cr),
+		Name:        cr.Name + "-backup-secret",
+		Namespace:   cr.Namespace,
+		Labels:      BuildLabels(cr),
+		Annotations: BuildAnnotations(cr),
 	}
 
 	s3URL, _ := url.Parse(cr.Spec.S3.Endpoint)
@@ -46,9 +48,9 @@ func BuildSecret(cr *rdsv1alpha1.MysqlBackup) (secret *corev1.Secret) {
 		s3SSLMode = true
 	}
 
-	mysqlPassword, _ = base64.StdEncoding.DecodeString(cr.Spec.Password)
-	s3AccessKey, _ = base64.StdEncoding.DecodeString(cr.Spec.S3.AccessKey)
-	s3SecretAccessKey, _ = base64.StdEncoding.DecodeString(cr.Spec.S3.SecretAccessKey)
+	mysqlPassword = []byte(util.Base64Decode(cr.Spec.Password))
+	s3AccessKey = []byte(util.Base64Decode(cr.Spec.S3.AccessKey))
+	s3SecretAccessKey = []byte(util.Base64Decode(cr.Spec.S3.SecretAccessKey))
 
 	secret.Data = make(map[string][]byte)
 	secret.Data["MYSQL_USERNAME"] = []byte(cr.Spec.Username)
@@ -78,9 +80,10 @@ func (t *CronJobBuilder) BuildCronJob() (job *batchv1.CronJob, err error) {
 	job.Kind = "CronJob"
 
 	job.ObjectMeta = metav1.ObjectMeta{
-		Name:      t.CR.Name + "-mysqlbackup",
-		Namespace: t.CR.Namespace,
-		Labels:    BuildLabels(t.CR),
+		Name:        t.CR.Name + "-mysqlbackup",
+		Namespace:   t.CR.Namespace,
+		Labels:      BuildLabels(t.CR),
+		Annotations: BuildAnnotations(t.CR),
 	}
 
 	jobSpec, err := t.buildJobSpec()
@@ -183,6 +186,13 @@ func BuildLabels(cr *rdsv1alpha1.MysqlBackup) (labels map[string]string) {
 		"cr-name":   cr.Name,
 		"api-group": rdsv1alpha1.GroupVersion.Group,
 	}
+	copier.CopyWithOption(labels, cr.Labels, copier.Option{DeepCopy: true})
+	return
+}
+
+func BuildAnnotations(cr *rdsv1alpha1.MysqlBackup) (annotations map[string]string) {
+	annotations = map[string]string{}
+	copier.CopyWithOption(annotations, cr.Annotations, copier.Option{DeepCopy: true})
 	return
 }
 

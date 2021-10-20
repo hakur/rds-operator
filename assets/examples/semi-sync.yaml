@@ -8,7 +8,7 @@ spec:
   clusterMode: SemiSync
   storageClassName: hostpath
   timeZone: Asia/Shanghai
-  configImage: rumia/rds-sidecar
+  configImage: rumia/rds-sidecar:v0.0.1
   image: mysql/mysql-server:5.7.34
   replicas: 4
   storageSize: 1Gi

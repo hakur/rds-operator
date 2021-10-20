@@ -26,6 +26,7 @@ func (t *MysqlBuilder) BuildMyCnfCM(cr *rdsv1alpha1.Mysql) (cm *corev1.ConfigMap
 	cm.Name = cr.Name + "-mycnf"
 	cm.Namespace = cr.Namespace
 	cm.Labels = BuildMysqlLabels(t.CR)
+	cm.Annotations = BuildMysqlAnnotaions(t.CR)
 
 	if cr.Spec.ExtraConfigDir != nil {
 		cnfDir = *cr.Spec.ExtraConfigDir
@@ -166,9 +167,10 @@ func (t *MysqlBuilder) BuildSts() (sts *appsv1.StatefulSet, err error) {
 	sts = new(appsv1.StatefulSet)
 
 	sts.ObjectMeta = metav1.ObjectMeta{
-		Name:      t.CR.Name + "-mysql",
-		Namespace: t.CR.Namespace,
-		Labels:    BuildMysqlLabels(t.CR),
+		Name:        t.CR.Name + "-mysql",
+		Namespace:   t.CR.Namespace,
+		Labels:      BuildMysqlLabels(t.CR),
+		Annotations: BuildMysqlAnnotaions(t.CR),
 	}
 
 	sts.TypeMeta = metav1.TypeMeta{
@@ -194,7 +196,7 @@ func (t *MysqlBuilder) BuildSts() (sts *appsv1.StatefulSet, err error) {
 		return nil, err
 	}
 
-	mysqlDataVolumeClaim.ObjectMeta = metav1.ObjectMeta{Name: "data", Labels: reconciler.BuildCRPVCLabels(t.CR, t.CR)} // use labels for gc , gc date is annotation types.PVCDeleteDateAnnotationName
+	mysqlDataVolumeClaim.ObjectMeta = metav1.ObjectMeta{Name: "data", Labels: reconciler.BuildCRPVCLabels(t.CR, t.CR), Annotations: BuildMysqlAnnotaions(t.CR)} // use labels for gc , gc date is annotation types.PVCDeleteDateAnnotationName
 	mysqlDataVolumeClaim.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{"ReadWriteOnce"}
 	mysqlDataVolumeClaim.Spec.StorageClassName = &t.CR.Spec.StorageClassName
 	mysqlDataVolumeClaim.Spec.Resources = corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: quantity}}
@@ -211,9 +213,10 @@ func (t *MysqlBuilder) BuildService(cr *rdsv1alpha1.Mysql) (svc *corev1.Service)
 	svc = new(corev1.Service)
 
 	svc.ObjectMeta = metav1.ObjectMeta{
-		Name:      cr.Name + "-mysql",
-		Namespace: cr.Namespace,
-		Labels:    BuildMysqlLabels(t.CR),
+		Name:        cr.Name + "-mysql",
+		Namespace:   cr.Namespace,
+		Labels:      BuildMysqlLabels(t.CR),
+		Annotations: BuildMysqlAnnotaions(t.CR),
 	}
 
 	svc.TypeMeta = metav1.TypeMeta{
@@ -274,6 +277,13 @@ func BuildMysqlLabels(cr *rdsv1alpha1.Mysql) (labels map[string]string) {
 		"cr-name":   cr.Name,
 		"api-group": rdsv1alpha1.GroupVersion.Group,
 	}
-	copier.Copy(labels, cr.Labels)
+	copier.CopyWithOption(labels, cr.Labels, copier.Option{DeepCopy: true})
 	return labels
+}
+
+// BuildMysqlAnnotaions generate annoations from cr resource, used for pod list filter
+func BuildMysqlAnnotaions(cr *rdsv1alpha1.Mysql) (annotations map[string]string) {
+	annotations = map[string]string{}
+	copier.CopyWithOption(annotations, cr.Annotations, copier.Option{DeepCopy: true})
+	return annotations
 }

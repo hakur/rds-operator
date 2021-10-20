@@ -27,8 +27,6 @@ type PodSettings struct {
 }
 
 type CommonField struct {
-	// Pod pod settings
-	Pod PodSettings `json:"pod,omitempty"`
 	// Image main container image
 	Image string `json:"image"`
 	// ImagePullPolicy all pods image pull policy，value should keep with corev1.PullPolicy

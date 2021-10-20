@@ -1077,18 +1077,6 @@ spec:
                     description: 'MGRRtries mysql mgr variable: loose-group_replication_recovery_retry_count'
                     type: integer
                 type: object
-              pod:
-                description: Pod pod settings
-                properties:
-                  annotations:
-                    additionalProperties:
-                      type: string
-                    type: object
-                  labels:
-                    additionalProperties:
-                      type: string
-                    type: object
-                type: object
               priorityClassName:
                 description: PriorityClassName pod priority class name for all pods
                   under CR resource

@@ -68,9 +68,10 @@ func buildRedisSvc(cr *rdsv1alpha1.Redis) (svc *corev1.Service) {
 	svc = new(corev1.Service)
 
 	svc.ObjectMeta = metav1.ObjectMeta{
-		Name:      cr.Name + "-redis",
-		Namespace: cr.Namespace,
-		Labels:    buildRedisLabels(cr),
+		Name:        cr.Name + "-redis",
+		Namespace:   cr.Namespace,
+		Labels:      buildRedisLabels(cr),
+		Annotations: buildRedisAnnotations(cr),
 	}
 
 	svc.TypeMeta = metav1.TypeMeta{
@@ -95,8 +96,14 @@ func buildRedisLabels(cr *rdsv1alpha1.Redis) (labels map[string]string) {
 		"cr-name":   cr.Name,
 		"api-group": rdsv1alpha1.GroupVersion.Group,
 	}
-	copier.Copy(labels, cr.Labels)
+	copier.CopyWithOption(labels, cr.Labels, copier.Option{DeepCopy: true})
 	return labels
+}
+
+func buildRedisAnnotations(cr *rdsv1alpha1.Redis) (annoations map[string]string) {
+	annoations = map[string]string{}
+	copier.CopyWithOption(annoations, cr.Annotations, copier.Option{DeepCopy: true})
+	return annoations
 }
 
 // caculateReplicas cacaulate redis statefulset replicas by masterReplicas and dataReplicas

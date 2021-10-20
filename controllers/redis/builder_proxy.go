@@ -15,9 +15,10 @@ func buildProxySvc(cr *rdsv1alpha1.Redis) (svc *corev1.Service) {
 	svc = new(corev1.Service)
 
 	svc.ObjectMeta = metav1.ObjectMeta{
-		Name:      cr.Name + "-proxy",
-		Namespace: cr.Namespace,
-		Labels:    buildProxyLabels(cr),
+		Name:        cr.Name + "-proxy",
+		Namespace:   cr.Namespace,
+		Labels:      buildProxyLabels(cr),
+		Annotations: buildProxyAnnotations(cr),
 	}
 
 	svc.TypeMeta = metav1.TypeMeta{
@@ -47,8 +48,14 @@ func buildProxyLabels(cr *rdsv1alpha1.Redis) (labels map[string]string) {
 		"cr-name":   cr.Name,
 		"api-group": rdsv1alpha1.GroupVersion.Group,
 	}
-	copier.Copy(labels, cr.Labels)
+	copier.CopyWithOption(labels, cr.Labels, copier.Option{DeepCopy: true})
 	return labels
+}
+
+func buildProxyAnnotations(cr *rdsv1alpha1.Redis) (annotations map[string]string) {
+	annotations = map[string]string{}
+	copier.CopyWithOption(annotations, cr.Annotations, copier.Option{DeepCopy: true})
+	return annotations
 }
 
 // buildProxyContainer generate redis cluster proxy container
