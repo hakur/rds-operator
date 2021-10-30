@@ -2,6 +2,7 @@ package proxysql
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -13,7 +14,9 @@ import (
 
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
 	"github.com/hakur/rds-operator/controllers/proxysql/builder"
+	"github.com/hakur/rds-operator/pkg/mysql"
 	"github.com/hakur/rds-operator/pkg/reconciler"
+	"github.com/hakur/rds-operator/pkg/types"
 	"github.com/hakur/rds-operator/util"
 )
 
@@ -51,6 +54,10 @@ func (t *ProxySQLReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 
 	if err = t.checkDeleteOrApply(ctx, cr); err != nil {
 		return r, client.IgnoreNotFound(err)
+	}
+
+	if err = t.fixMysqlServers(ctx, cr); err != nil {
+		return r, err
 	}
 
 	return ctrl.Result{}, nil
@@ -155,4 +162,157 @@ func (t *ProxySQLReconciler) clean(ctx context.Context, cr *rdsv1alpha1.ProxySQL
 	}
 
 	return nil
+}
+
+func (t *ProxySQLReconciler) fixMysqlServers(ctx context.Context, cr *rdsv1alpha1.ProxySQL) (err error) {
+	pa, err := mysql.NewProxySQLAdmin(mysql.DSN{})
+	if err != nil {
+		return err
+	}
+
+	select {
+	case <-ctx.Done():
+		if _, err := pa.Conn.Exec("ROLLBACK"); err != nil {
+			return err
+		}
+		return types.ErrCtxTimeout
+	default:
+		var deleteMysqlUsers []*mysql.TableMysqlUsers
+		var addMysqlUsers []*mysql.TableMysqlUsers
+		var deleteMysqlServers []*mysql.TableMysqlServers
+		var addMysqlServers []*mysql.TableMysqlServers
+		var deleteProxySQLServers []*mysql.TableProxySQLServers
+		var addProxySQLServers []*mysql.TableProxySQLServers
+
+		for _, s := range cr.Spec.Mysqls {
+			addMysqlServers = append(addMysqlServers, &mysql.TableMysqlServers{
+				Hostname: s.Host,
+				Port:     s.Port,
+			})
+		}
+
+		for _, u := range cr.Spec.FrontendUsers {
+			addMysqlUsers = append(addMysqlUsers, &mysql.TableMysqlUsers{
+				Username:      u.Username,
+				Password:      u.Password,
+				DefaultSchema: sql.NullString{String: "mysql"},
+				Frontend:      true,
+			})
+		}
+
+		for _, u := range cr.Spec.BackendUsers {
+			addMysqlUsers = append(addMysqlUsers, &mysql.TableMysqlUsers{
+				Username:      u.Username,
+				Password:      u.Password,
+				DefaultSchema: sql.NullString{String: "mysql"},
+				Backend:       true,
+			})
+		}
+
+		for i := 0; i < int(*cr.Spec.Replicas); i++ {
+			addProxySQLServers = append(addProxySQLServers, &mysql.TableProxySQLServers{
+				Hostname: "",
+			})
+		}
+
+		dbMysqlServers, err := pa.GetMysqlServers(ctx)
+		if err != nil {
+			return err
+		}
+
+		for _, a := range dbMysqlServers {
+			found := false
+			for _, b := range addMysqlServers {
+				if b.Hostname == a.Hostname {
+					found = true
+					break
+				}
+			}
+			if !found {
+				deleteMysqlServers = append(deleteMysqlServers, a)
+			}
+		}
+
+		dbProxysqlServers, err := pa.GetProxySQLServers(ctx)
+		if err != nil {
+			return err
+		}
+
+		for _, a := range dbProxysqlServers {
+			found := false
+			for _, b := range addProxySQLServers {
+				if b.Hostname == a.Hostname {
+					found = true
+					break
+				}
+			}
+			if !found {
+				deleteProxySQLServers = append(deleteProxySQLServers, a)
+			}
+		}
+
+		dbMysqlUsers, err := pa.GetMysqlUsers(ctx)
+		if err != nil {
+			return err
+		}
+
+		for _, a := range dbMysqlUsers {
+			found := false
+			for _, b := range addMysqlUsers {
+				if b.Username == a.Username && b.Frontend == a.Frontend {
+					found = true
+					break
+				}
+			}
+			if !found {
+				deleteMysqlUsers = append(deleteMysqlUsers, a)
+			}
+		}
+
+		if err = pa.Begin(ctx); err != nil {
+			return err
+		}
+
+		if err = pa.AddMysqlServers(ctx, addMysqlServers); err != nil {
+			pa.Rollback(ctx)
+			return err
+		}
+
+		if err = pa.AddProxySQLServers(ctx, addProxySQLServers); err != nil {
+			pa.Rollback(ctx)
+			return err
+		}
+
+		if err = pa.AddMysqlUsers(ctx, addMysqlUsers); err != nil {
+			pa.Rollback(ctx)
+			return err
+		}
+
+		for _, server := range deleteProxySQLServers {
+			if err = pa.RemoveProxySQLServer(ctx, server.Hostname); err != nil {
+				pa.Rollback(ctx)
+				return err
+			}
+		}
+
+		for _, server := range deleteMysqlServers {
+			if err = pa.RemoveMysqlServer(ctx, server.Hostname); err != nil {
+				pa.Rollback(ctx)
+				return err
+			}
+		}
+
+		for _, user := range deleteMysqlUsers {
+			if err = pa.RemoveMysqlUser(ctx, user.Username, user.Frontend); err != nil {
+				pa.Rollback(ctx)
+				return err
+			}
+		}
+
+		if err = pa.Commit(ctx); err != nil {
+			return err
+		}
+	}
+
+	return err
 }

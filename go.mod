@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/bombsimon/logrusr v1.1.0
 	github.com/go-sql-driver/mysql v1.6.0
-	github.com/hakur/util v0.0.0-20211009033908-2e236ded41f5
+	github.com/hakur/util v0.0.0-20211030095808-9cf14e868979
 	github.com/jinzhu/copier v0.3.2
 	github.com/minio/minio-go/v7 v7.0.14
 	github.com/sirupsen/logrus v1.8.1
