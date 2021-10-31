@@ -4,6 +4,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type ProxySQLClientUser struct {
+	MysqlSimpleUserInfo `json:",inline"`
+	DefaultHostGroup    int `json:"defaultHostGroup"`
+}
+
 // ProxySQLSpec defines the desired state of ProxySQL
 // mysql 8 admin-hash_passwords=false https://www.cnblogs.com/9527l/p/12435675.html https://kitcharoenp.github.io/mysql/2020/07/18/proxysql2_backend_users_config.html https://www.jianshu.com/p/e22b149ba270
 type ProxySQLSpec struct {
@@ -25,12 +30,17 @@ type ProxySQLSpec struct {
 	ConfigImage string `json:"configImage"`
 
 	// Mysql mysql backend servers with host:port list
-	Mysqls        []MysqlHost           `json:"mysqls"`
-	BackendUsers  []MysqlSimpleUserInfo `json:"backendUsers"`
-	FrontendUsers []MysqlUser           `json:"frontedUsers"`
-	AdminUser     MysqlSimpleUserInfo   `json:"adminUser"`
-	ClusterUser   MysqlSimpleUserInfo   `json:"clusterUser"`
-	MonitorUser   MysqlSimpleUserInfo   `json:"monitorUser"`
+	Mysqls []MysqlHost `json:"mysqls"`
+	// FrontendUsers proxysql use theese users to connect mysql server and exec sql query
+	BackendUsers []ProxySQLClientUser `json:"backendUsers"`
+	// FrontendUsers mysql client use theese users connect proxysql
+	FrontendUsers []ProxySQLClientUser `json:"frontedUsers"`
+	// AdminUsers proxysql admin users list
+	AdminUsers []MysqlSimpleUserInfo `json:"adminUsers"`
+	// ClusterUser proxysql cluster peers user, not mysql user
+	ClusterUser MysqlSimpleUserInfo `json:"clusterUser"`
+	// MonitorUser proxysql use this user to connect and monitor mysql server
+	MonitorUser MysqlSimpleUserInfo `json:"monitorUser"`
 	// ClusterMode mysql cluster mode
 	ClusterMode ClusterMode `json:"clusterMode"`
 	// MysqlMaxConn max connections per mysql instance

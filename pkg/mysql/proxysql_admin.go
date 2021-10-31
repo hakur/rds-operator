@@ -51,6 +51,26 @@ func (t *ProxySQLAdmin) GetProxySQLServers(ctx context.Context) (data []*TablePr
 	return data, err
 }
 
+func (t *ProxySQLAdmin) LoadAdminVariablesToRuntime(ctx context.Context) (err error) {
+	_, err = t.Conn.ExecContext(ctx, "LOAD ADMIN VARIABLES TO RUNTIME")
+	return err
+}
+
+func (t *ProxySQLAdmin) LoadMysqlServersToRuntime(ctx context.Context) (err error) {
+	_, err = t.Conn.ExecContext(ctx, "LOAD MYSQL SERVERS TO RUNTIME")
+	return err
+}
+
+func (t *ProxySQLAdmin) LoadMysqlUsersServersToRuntime(ctx context.Context) (err error) {
+	_, err = t.Conn.ExecContext(ctx, "LOAD MYSQL USERS TO RUNTIME")
+	return err
+}
+
+func (t *ProxySQLAdmin) LoadProxySQLServersToRuntime(ctx context.Context) (err error) {
+	_, err = t.Conn.ExecContext(ctx, "LOAD PROXYSQL SERVERS TO RUNTIME")
+	return err
+}
+
 func (t *ProxySQLAdmin) Begin(ctx context.Context) (err error) {
 	_, err = t.Conn.ExecContext(ctx, "BEGIN")
 	return err
@@ -261,7 +281,7 @@ func (t *ProxySQLAdmin) AddMysqlUsers(ctx context.Context, users []*TableMysqlUs
 			hutil.DefaultValue(user)
 			// check user exists
 			usernameCount := 0
-			countResukt, err := t.Conn.QueryContext(ctx, "SELECT COUNT(hostname) FROM mysql_servers WHERE hostname='"+user.Username+"' AND frontend="+hutil.BoolToStrNumber(user.Frontend))
+			countResukt, err := t.Conn.QueryContext(ctx, "SELECT COUNT(username) FROM mysql_users WHERE username='"+user.Username+"' AND frontend="+hutil.BoolToStrNumber(user.Frontend))
 			if err != nil {
 				return fmt.Errorf("count username=%s,frontend=%s from proxysql db error -> %s", user.Username, hutil.BoolToStrNumber(user.Frontend), err.Error())
 			} else {
@@ -285,7 +305,7 @@ func (t *ProxySQLAdmin) AddMysqlUsers(ctx context.Context, users []*TableMysqlUs
 			// Attributes            string         //attributes
 			// Comment               string         //comment
 			if usernameCount > 0 {
-				_, err = t.Conn.ExecContext(ctx, fmt.Sprintf("UPDATE mysql_servers set username='%s',password='%s',active=%d,use_ssl=%d,default_hostgroup=%d,default_schema='%s',schema_locked=%d,transaction_persistent=%d,fast_forward=%d,backend=%d,frontend=%d,max_connections=%d,attributes='%s',comment=%s WHERE username='%s AND frontend=%d'",
+				_, err = t.Conn.ExecContext(ctx, fmt.Sprintf("UPDATE mysql_users set username='%s',password='%s',active=%d,use_ssl=%d,default_hostgroup=%d,default_schema='%s',schema_locked=%d,transaction_persistent=%d,fast_forward=%d,backend=%d,frontend=%d,max_connections=%d,attributes='%s',comment='%s' WHERE username='%s' AND frontend=%d",
 					user.Username,
 					user.Password,
 					hutil.BoolToInt(user.Active),
@@ -308,7 +328,7 @@ func (t *ProxySQLAdmin) AddMysqlUsers(ctx context.Context, users []*TableMysqlUs
 					return fmt.Errorf("update username=%s,frontend=%s to proxysql db error -> %s", user.Username, hutil.BoolToStrNumber(user.Frontend), err.Error())
 				}
 			} else {
-				_, err = t.Conn.ExecContext(ctx, fmt.Sprintf("INSERT INTO mysql_servers(username,password,active,use_ssl,default_hostgroup,default_schema,schema_locked,transaction_persistent,fast_forward,backend,frontend,max_connections,attributes,comment) values ('%s','%s',%d,%d,%d,'%s',%d,%d,%d,%d,%d,%d,'%s','%s')",
+				_, err = t.Conn.ExecContext(ctx, fmt.Sprintf("INSERT INTO mysql_users(username,password,active,use_ssl,default_hostgroup,default_schema,schema_locked,transaction_persistent,fast_forward,backend,frontend,max_connections,attributes,comment) values ('%s','%s',%d,%d,%d,'%s',%d,%d,%d,%d,%d,%d,'%s','%s')",
 					user.Username,
 					user.Password,
 					hutil.BoolToInt(user.Active),
@@ -335,6 +355,6 @@ func (t *ProxySQLAdmin) AddMysqlUsers(ctx context.Context, users []*TableMysqlUs
 }
 
 func (t *ProxySQLAdmin) RemoveMysqlUser(ctx context.Context, username string, frontend bool) (err error) {
-	_, err = t.Conn.ExecContext(ctx, "DELETE FROM mysql_users where hostname='"+username+"' and frontend="+hutil.BoolToStrNumber(frontend))
+	_, err = t.Conn.ExecContext(ctx, "DELETE FROM mysql_users where username='"+username+"' and frontend="+hutil.BoolToStrNumber(frontend))
 	return err
 }

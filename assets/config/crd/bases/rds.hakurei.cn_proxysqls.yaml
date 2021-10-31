@@ -39,18 +39,21 @@ spec:
               https://kitcharoenp.github.io/mysql/2020/07/18/proxysql2_backend_users_config.html
               https://www.jianshu.com/p/e22b149ba270
             properties:
-              adminUser:
-                properties:
-                  password:
-                    description: Password mysql login password of this user
-                    type: string
-                  username:
-                    description: Username mysql login account name
-                    type: string
-                required:
-                - password
-                - username
-                type: object
+              adminUsers:
+                description: AdminUsers proxysql admin users list
+                items:
+                  properties:
+                    password:
+                      description: Password mysql login password of this user
+                      type: string
+                    username:
+                      description: Username mysql login account name
+                      type: string
+                  required:
+                  - password
+                  - username
+                  type: object
+                type: array
               affinity:
                 description: If specified, the pod's scheduling constraints
                 properties:
@@ -882,8 +885,12 @@ spec:
                   type: string
                 type: array
               backendUsers:
+                description: FrontendUsers proxysql use theese users to connect mysql
+                  server and exec sql query
                 items:
                   properties:
+                    defaultHostGroup:
+                      type: integer
                     password:
                       description: Password mysql login password of this user
                       type: string
@@ -891,6 +898,7 @@ spec:
                       description: Username mysql login account name
                       type: string
                   required:
+                  - defaultHostGroup
                   - password
                   - username
                   type: object
@@ -899,6 +907,7 @@ spec:
                 description: ClusterMode mysql cluster mode
                 type: string
               clusterUser:
+                description: ClusterUser proxysql cluster peers user, not mysql user
                 properties:
                   password:
                     description: Password mysql login password of this user
@@ -920,36 +929,20 @@ spec:
                   config
                 type: string
               frontedUsers:
+                description: FrontendUsers mysql client use theese users connect proxysql
                 items:
-                  description: MysqlUser mysql user settings
                   properties:
-                    databaseTarget:
-                      description: 'DatabaseTarget which database or tables will granted
-                        privileges to this user. for example : grant all privileges
-                        on *.* to user xxx@''%'' indentified by ''xxxxx'', in this
-                        case, DatabaseTarget value should be ''*.*'''
-                      type: string
-                    domain:
-                      description: 'Domain user login domain , for example : ''%'''
-                      type: string
+                    defaultHostGroup:
+                      type: integer
                     password:
                       description: Password mysql login password of this user
                       type: string
-                    privileges:
-                      description: 'Privileges mysql grant sql privileges, for example
-                        : []stirng{ "SELECT" ,"REPLICATION CLIENT"} or []string{"ALL
-                        PRIVILEGES"}'
-                      items:
-                        type: string
-                      type: array
                     username:
                       description: Username mysql login account name
                       type: string
                   required:
-                  - databaseTarget
-                  - domain
+                  - defaultHostGroup
                   - password
-                  - privileges
                   - username
                   type: object
                 type: array
@@ -1088,6 +1081,8 @@ spec:
                     type: integer
                 type: object
               monitorUser:
+                description: MonitorUser proxysql use this user to connect and monitor
+                  mysql server
                 properties:
                   password:
                     description: Password mysql login password of this user
@@ -1356,7 +1351,7 @@ spec:
                   type: object
                 type: array
             required:
-            - adminUser
+            - adminUsers
             - backendUsers
             - clusterMode
             - clusterUser

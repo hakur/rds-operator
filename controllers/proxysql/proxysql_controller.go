@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strconv"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -18,6 +19,7 @@ import (
 	"github.com/hakur/rds-operator/pkg/reconciler"
 	"github.com/hakur/rds-operator/pkg/types"
 	"github.com/hakur/rds-operator/util"
+	hutil "github.com/hakur/util"
 )
 
 const (
@@ -56,8 +58,23 @@ func (t *ProxySQLReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 		return r, client.IgnoreNotFound(err)
 	}
 
-	if err = t.fixMysqlServers(ctx, cr); err != nil {
-		return r, err
+	// write data to proxysql server
+	var proxysqlPods corev1.PodList
+	if err = t.List(ctx, &proxysqlPods, client.InNamespace(cr.Namespace), client.MatchingLabels(builder.BuildProxySQLLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+		for _, pod := range proxysqlPods.Items {
+			if pod.Status.Phase != "Running" {
+				continue
+			}
+			dsn := mysql.DSN{
+				Host:     pod.Name + "." + cr.Name + "-proxysql." + cr.Namespace + ".svc",
+				Port:     6032,
+				Username: cr.Spec.ClusterUser.Username,
+				Password: hutil.Base64Decode(cr.Spec.ClusterUser.Password),
+			}
+			if err = t.syncProxySQLData(ctx, cr, dsn); err != nil {
+				return r, err
+			}
+		}
 	}
 
 	return ctrl.Result{}, nil
@@ -164,8 +181,8 @@ func (t *ProxySQLReconciler) clean(ctx context.Context, cr *rdsv1alpha1.ProxySQL
 	return nil
 }
 
-func (t *ProxySQLReconciler) fixMysqlServers(ctx context.Context, cr *rdsv1alpha1.ProxySQL) (err error) {
-	pa, err := mysql.NewProxySQLAdmin(mysql.DSN{})
+func (t *ProxySQLReconciler) syncProxySQLData(ctx context.Context, cr *rdsv1alpha1.ProxySQL, dsn mysql.DSN) (err error) {
+	pa, err := mysql.NewProxySQLAdmin(dsn)
 	if err != nil {
 		return err
 	}
@@ -183,6 +200,11 @@ func (t *ProxySQLReconciler) fixMysqlServers(ctx context.Context, cr *rdsv1alpha
 		var addMysqlServers []*mysql.TableMysqlServers
 		var deleteProxySQLServers []*mysql.TableProxySQLServers
 		var addProxySQLServers []*mysql.TableProxySQLServers
+		var replicas = 1
+
+		if cr.Spec.Replicas != nil {
+			replicas = int(*cr.Spec.Replicas)
+		}
 
 		for _, s := range cr.Spec.Mysqls {
 			addMysqlServers = append(addMysqlServers, &mysql.TableMysqlServers{
@@ -193,25 +215,27 @@ func (t *ProxySQLReconciler) fixMysqlServers(ctx context.Context, cr *rdsv1alpha
 
 		for _, u := range cr.Spec.FrontendUsers {
 			addMysqlUsers = append(addMysqlUsers, &mysql.TableMysqlUsers{
-				Username:      u.Username,
-				Password:      u.Password,
-				DefaultSchema: sql.NullString{String: "mysql"},
-				Frontend:      true,
+				Username:         u.Username,
+				Password:         hutil.Base64Decode(u.Password),
+				DefaultSchema:    sql.NullString{String: "mysql"},
+				Frontend:         true,
+				DefaultHostgroup: u.DefaultHostGroup,
 			})
 		}
 
 		for _, u := range cr.Spec.BackendUsers {
 			addMysqlUsers = append(addMysqlUsers, &mysql.TableMysqlUsers{
-				Username:      u.Username,
-				Password:      u.Password,
-				DefaultSchema: sql.NullString{String: "mysql"},
-				Backend:       true,
+				Username:         u.Username,
+				Password:         hutil.Base64Decode(u.Password),
+				DefaultSchema:    sql.NullString{String: "mysql"},
+				Backend:          true,
+				DefaultHostgroup: u.DefaultHostGroup,
 			})
 		}
 
-		for i := 0; i < int(*cr.Spec.Replicas); i++ {
+		for i := 0; i < replicas; i++ {
 			addProxySQLServers = append(addProxySQLServers, &mysql.TableProxySQLServers{
-				Hostname: "",
+				Hostname: cr.Name + "-" + strconv.Itoa(i) + "." + cr.Name,
 			})
 		}
 
@@ -307,6 +331,18 @@ func (t *ProxySQLReconciler) fixMysqlServers(ctx context.Context, cr *rdsv1alpha
 				pa.Rollback(ctx)
 				return err
 			}
+		}
+
+		if err = pa.LoadMysqlServersToRuntime(ctx); err != nil {
+			return err
+		}
+
+		if err = pa.LoadMysqlUsersServersToRuntime(ctx); err != nil {
+			return err
+		}
+
+		if err = pa.LoadProxySQLServersToRuntime(ctx); err != nil {
+			return err
 		}
 
 		if err = pa.Commit(ctx); err != nil {

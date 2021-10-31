@@ -45,21 +45,28 @@ func (t *ProxySQLConfigCommand) Action(ctx *kingpin.ParseContext) (err error) {
 	// mysql -uadmin -preplication_password -P6032 -h127.0.0.1
 	// LOAD MYSQL SERVERS TO RUNTIME;
 	cfg.AdminVariables = map[string]string{
-		"admin_credentials":                    t.AdminCredentials,
-		"mysql_ifaces":                         "0.0.0.0:6032",
-		"admin-cluster_username":               t.ClusterUsername,
-		"admin-cluster_password":               t.ClusterPassword,
-		"admin-cluster_check_interval_ms":      "200",
-		"admin-cluster_check_status_frequency": "100",
-		// "cluster_mysql_query_rules_save_to_disk":      "true",
-		// "cluster_mysql_servers_save_to_disk":          "true",
-		// "cluster_mysql_users_save_to_disk":            "true",
-		// "cluster_proxysql_servers_save_to_disk":       "true",
-		// "cluster_mysql_query_rules_diffs_before_sync": "3",
-		// "cluster_mysql_servers_diffs_before_sync":     "3",
-		// "cluster_mysql_users_diffs_before_sync":       "3",
-		// "cluster_admin_variables_diffs_before_sync":   "3",
-		// "cluster_proxysql_servers_diffs_before_sync":  "3",
+		"admin_credentials": t.AdminCredentials,
+		"mysql_ifaces":      "0.0.0.0:6032",
+		// cluster credentials must exists in admin_credentials
+		"admin-cluster_username":                     t.ClusterUsername,
+		"admin-cluster_password":                     t.ClusterPassword,
+		"admin-cluster_check_interval_ms":            "200",
+		"admin-cluster_check_status_frequency":       "100",
+		"admin-cluster_admin_variables_save_to_disk": "false",
+		// broadcast to other proxysql servers when exec LOAD XXX TO RUNTIME
+		"admin-checksum_mysql_query_rules": "true",
+		"admin-checksum_mysql_servers":     "true",
+		"admin-checksum_mysql_users":       "true",
+		// save some infomation to disk avoid panic of restart
+		"admin-cluster_mysql_query_rules_save_to_disk": "true",
+		"admin-cluster_mysql_servers_save_to_disk":     "true",
+		"admin-cluster_mysql_users_save_to_disk":       "true",
+		"admin-cluster_proxysql_servers_save_to_disk":  "true",
+		// avoid parallel sync between proxysql servers, how many checksum different between now proxysql and other proxysql, then trigger cluster data sync
+		"admin-cluster_mysql_query_rules_diffs_before_sync": "3",
+		"admin-cluster_mysql_servers_diffs_before_sync":     "3",
+		"admin-cluster_mysql_users_diffs_before_sync":       "3",
+		"admin-cluster_proxysql_servers_diffs_before_sync":  "3",
 	}
 
 	cfg.MysqlVariables = map[string]string{

@@ -10,34 +10,35 @@ spec:
   mysqlVersion: "5.7.34"
   nodePort: 32336 #set to zero if want use random nodeport,delete this field will disable nodeport
   storageSize: 1Gi
-  mysqls:
-  - host: yuxing-mysql-0
+  replicas: 3
+  mysqls: 
+  - host: yuxing-mysql-0.yuxing-mysql # pod dsn names or remote mysql servers like 171.223.203.139, in other way, make proxysql pod can connect this address
     port: 3306
-  - host: yuxing-mysql-1
+  - host: yuxing-mysql-1.yuxing-mysql
     port: 3306
-  - host: yuxing-mysql-2
+  - host: yuxing-mysql-2.yuxing-mysql
     port: 3306
   mysqlMaxConn: 200
   clusterMode: MGRSP
   monitorUser:
-    username: replication
+    username: replication # user on mysql server that you need create
     password: cmVwbGljYXRpb25fcGFzc3dvcmQ=
-  clusterUser:
-    username: admin
+  clusterUser: # cluster user must exists and has same password in adminUsers
+    username: admin # user will auto create on proxysql server
     password: cmVwbGljYXRpb25fcGFzc3dvcmQ=
-  adminUser:
-    username: admin
+  adminUsers: # most times, only need two user
+  - username: admin # user admin could not remote login
+    password: cmVwbGljYXRpb25fcGFzc3dvcmQ=
+  - username: yuxing # other user can remote login, operator use this user to management proxysql servers
     password: cmVwbGljYXRpb25fcGFzc3dvcmQ=
   backendUsers:
-  - username: root
+  - username: root # user on mysql server that you need create, then proxysql use this user exec sql query
     password: MTIzNDU2
+    defaultHostGroup: 10
   frontedUsers:
-  - username: root
+  - username: root # user auto create on proxysql server, mysql client use theese user exec sql query
     password: MTIzNDU2
-    databaseTarget: "*.*"
-    domain: "%"
-    privileges:
-    - SELECT
+    defaultHostGroup: 10
   # readinessProbe:
   #   exec:
   #     command:

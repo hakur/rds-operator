@@ -3,6 +3,7 @@ package builder
 import (
 	"encoding/base64"
 	"strconv"
+	"strings"
 
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
 	"github.com/hakur/rds-operator/pkg/reconciler"
@@ -56,8 +57,14 @@ func (t *ProxySQLBuilder) buildProxySQLVolume() (data []corev1.Volume) {
 
 // buildProxySQLEnvs generate pod environments variables
 func (t *ProxySQLBuilder) buildProxySQLEnvs() (data []corev1.EnvVar) {
-	var adminCredentials = base64.StdEncoding.EncodeToString([]byte(t.CR.Spec.AdminUser.Username + ":" + hutil.Base64Decode(t.CR.Spec.AdminUser.Password)))
-	maxWriters := 1
+	var adminCredentials string
+	var maxWriters = 1
+
+	for _, adminUser := range t.CR.Spec.AdminUsers {
+		adminCredentials += adminUser.Username + ":" + hutil.Base64Decode(adminUser.Password) + ";"
+	}
+	adminCredentials = base64.StdEncoding.EncodeToString([]byte(strings.Trim(adminCredentials, ";")))
+
 	if t.CR.Spec.ClusterMode == rdsv1alpha1.ModeMGRMP {
 		maxWriters = len(t.CR.Spec.Mysqls)
 	}

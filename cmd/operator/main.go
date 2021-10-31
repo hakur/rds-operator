@@ -32,7 +32,7 @@ var (
 	enableLeaderElection = kingpin.Flag("leader-elect", "is enable multi operators leader election ，only one operator pod work if enabled leader election").Default("false").Bool()
 	namespaceFilter      = kingpin.Flag("namespace", "namespace for crd watching,watch all namespaces if value is empty").Default(util.EnvOrDefault("NAMESPACE", "")).String()
 	logLevel             = kingpin.Flag("log-level", "log level this application").Default(util.EnvOrDefault("LOG_LEVEL", "info")).String()
-	runController        = kingpin.Flag("run-controller", "run specific operator controller").Default("all").Enum("mysql", "mysqlBackup", "proxysql", "redis")
+	runController        = kingpin.Flag("run-controller", "run specific operator controller").Default("all").Enum("all", "mysql", "mysqlBackup", "proxysql", "redis")
 )
 
 func init() {
