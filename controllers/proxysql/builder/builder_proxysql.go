@@ -66,7 +66,7 @@ func (t *ProxySQLBuilder) buildProxySQLEnvs() (data []corev1.EnvVar) {
 	adminCredentials = base64.StdEncoding.EncodeToString([]byte(strings.Trim(adminCredentials, ";")))
 
 	if t.CR.Spec.ClusterMode == rdsv1alpha1.ModeMGRMP {
-		maxWriters = len(t.CR.Spec.Mysqls)
+		maxWriters = 3
 	}
 
 	data = []corev1.EnvVar{
@@ -79,6 +79,7 @@ func (t *ProxySQLBuilder) buildProxySQLEnvs() (data []corev1.EnvVar) {
 		{Name: "ADMIN_CREDENTIALS", Value: adminCredentials},
 		{Name: "MYSQL_MONITOR_USERNAME", Value: t.CR.Spec.MonitorUser.Username},
 		{Name: "MYSQL_MONITOR_PASSWORD", Value: t.CR.Spec.MonitorUser.Password},
+		{Name: "MYSQL_CLUSTER_MODE", Value: string(t.CR.Spec.ClusterMode)},
 	}
 
 	return data
@@ -134,7 +135,7 @@ func (t *ProxySQLBuilder) BuildSts() (sts *appsv1.StatefulSet, err error) {
 	}
 
 	spec.Replicas = t.CR.Spec.Replicas
-	spec.ServiceName = t.CR.Name
+	spec.ServiceName = t.CR.Name + "-proxysql"
 	spec.Selector = &metav1.LabelSelector{MatchLabels: BuildProxySQLLabels(t.CR)}
 
 	podTemplateSpec.ObjectMeta = metav1.ObjectMeta{Labels: BuildProxySQLLabels(t.CR)}

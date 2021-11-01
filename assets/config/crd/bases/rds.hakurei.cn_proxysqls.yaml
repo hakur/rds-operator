@@ -1102,19 +1102,38 @@ spec:
                   client that connected on proxysql
                 type: string
               mysqls:
-                description: Mysql mysql backend servers with host:port list
-                items:
-                  description: MysqlHost mysql back server connection settings
-                  properties:
-                    host:
-                      type: string
-                    port:
-                      type: integer
-                  required:
-                  - host
-                  - port
-                  type: object
-                type: array
+                description: Mysql mysql backend servers
+                properties:
+                  crd:
+                    description: CRD CRDMysql connect mysql.rds.hakurei.cn/v1alpha1
+                      pods
+                    properties:
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                      port:
+                        type: integer
+                    required:
+                    - name
+                    type: object
+                  remote:
+                    description: Remote mysql backend servers with host:port list.
+                      if field ProxySQLBackendMysql.CRD declered and not nil, this
+                      field will not working
+                    items:
+                      description: MysqlHost mysql back server connection settings
+                      properties:
+                        host:
+                          type: string
+                        port:
+                          type: integer
+                      required:
+                      - host
+                      - port
+                      type: object
+                    type: array
+                type: object
               nodePort:
                 description: NodePort  nodeport of proxysql service if this value
                   is nil, means no nodePort should be open if this value is zero,
@@ -1362,7 +1381,6 @@ spec:
             - mysqlMaxConn
             - mysqlVersion
             - mysqls
-            - nodePort
             - storageClassName
             - storageSize
             - timeZone

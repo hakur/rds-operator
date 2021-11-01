@@ -28,5 +28,42 @@ spec:
     - "SUPER"
   semiSync:
     doubleMasterHA: true
-    
-  
+---
+
+apiVersion: rds.hakurei.cn/v1alpha1
+kind: ProxySQL
+metadata:
+  name: semisync
+spec:
+  configImage: rumia/rds-sidecar:i8
+  storageClassName: hostpath
+  timeZone: Asia/Shanghai
+  image: rumia/proxysql:2.2.0 # proxysql/proxysql:2.3.2
+  mysqlVersion: "5.7.34"
+  nodePort: 32338 #set to zero if want use random nodeport,delete this field will disable nodeport
+  storageSize: 1Gi
+  replicas: 3
+  mysqls:
+    crd: # connect mysql.rds.hakurei.cn/v1alpha1 pods
+      name: semisync 
+  mysqlMaxConn: 200
+  clusterMode: SemiSync
+  monitorUser:
+    username: replication # user on mysql server that you need create
+    password: cmVwbGljYXRpb25fcGFzc3dvcmQ=
+  clusterUser: # cluster user must exists and has same password in adminUsers
+    username: yuxing # user will auto create on proxysql server by operator
+    password: cmVwbGljYXRpb25fcGFzc3dvcmQ=
+  adminUsers: # most times, only need two user
+  - username: admin # user admin could not remote login
+    password: cmVwbGljYXRpb25fcGFzc3dvcmQ=
+  - username: yuxing # other user can remote login, operator use this user to management proxysql servers
+    password: cmVwbGljYXRpb25fcGFzc3dvcmQ=
+  backendUsers:
+  - username: root # user on mysql server that you need create, then proxysql use this user exec sql query
+    password: MTIzNDU2
+    defaultHostGroup: 30
+  frontedUsers:
+  - username: root # user auto create on proxysql server by operator, mysql client use theese user exec sql query
+    password: MTIzNDU2
+    defaultHostGroup: 30

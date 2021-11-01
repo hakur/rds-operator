@@ -51,6 +51,15 @@ func (t *ProxySQLAdmin) GetProxySQLServers(ctx context.Context) (data []*TablePr
 	return data, err
 }
 
+// func (t *ProxySQLAdmin) LoadMysqlReplicationFromConfig(ctx context.Context) (err error) {
+// 	// https://blog.pythian.com/proxysql-configuration-file-startup-process-explained/
+// 	if _, err = t.Conn.ExecContext(ctx, "LOAD mysql_replication_hostgroups FROM CONFIG"); err != nil {
+// 		return err
+// 	}
+// 	_, err = t.Conn.ExecContext(ctx, "LOAD mysql_group_replication_hostgroups FROM CONFIG")
+// 	return err
+// }
+
 func (t *ProxySQLAdmin) LoadAdminVariablesToRuntime(ctx context.Context) (err error) {
 	_, err = t.Conn.ExecContext(ctx, "LOAD ADMIN VARIABLES TO RUNTIME")
 	return err

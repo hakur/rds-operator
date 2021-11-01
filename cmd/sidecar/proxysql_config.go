@@ -62,6 +62,8 @@ func (t *ProxySQLConfigCommand) Action(ctx *kingpin.ParseContext) (err error) {
 		"admin-cluster_mysql_servers_save_to_disk":     "true",
 		"admin-cluster_mysql_users_save_to_disk":       "true",
 		"admin-cluster_proxysql_servers_save_to_disk":  "true",
+		// dynamic config mysql
+		// "admin-cluster_mysql_variables_save_to_disk": "false",
 		// avoid parallel sync between proxysql servers, how many checksum different between now proxysql and other proxysql, then trigger cluster data sync
 		"admin-cluster_mysql_query_rules_diffs_before_sync": "3",
 		"admin-cluster_mysql_servers_diffs_before_sync":     "3",
@@ -95,40 +97,6 @@ func (t *ProxySQLConfigCommand) Action(ctx *kingpin.ParseContext) (err error) {
 		"sessions_sort":              "true",
 		"connect_retries_on_failure": "10",
 	}
-
-	// cfg.MysqlUsers = append(cfg.MysqlUsers, map[string]string{
-	// 	"username":          "root",
-	// 	"password":          "123456",
-	// 	"default_hostgroup": "10",
-	// 	"max_connections":   "200",
-	// 	"default_schema":    "mysql",
-	// 	"active":            "1",
-	// })
-
-	// cfg.MysqlServers = append(cfg.MysqlServers, map[string]string{
-	// 	"addresses":       "yuxing-mysql-0",
-	// 	"port":            "3306",
-	// 	"hostgroup":       "10",
-	// 	"max_connections": "200",
-	// })
-	// cfg.MysqlServers = append(cfg.MysqlServers, map[string]string{
-	// 	"addresses":       "yuxing-mysql-1",
-	// 	"port":            "3306",
-	// 	"hostgroup":       "10",
-	// 	"max_connections": "200",
-	// })
-	// cfg.MysqlServers = append(cfg.MysqlServers, map[string]string{
-	// 	"addresses":       "yuxing-mysql-2",
-	// 	"port":            "3306",
-	// 	"hostgroup":       "10",
-	// 	"max_connections": "200",
-	// })
-
-	// cfg.ProxySQLServers = append(cfg.ProxySQLServers, map[string]string{
-	// 	"hostname": "yuxing-proxysql-0",
-	// 	"port":     "6032",
-	// 	"weight":   "1",
-	// })
 
 	cfg.Datadir = "/data/proxysql"
 
@@ -178,7 +146,8 @@ func (t *ProxySQLConfigCommand) mgrmpConfig(cfg *mysql.ProxySQLConfWriter) {
 
 func (t *ProxySQLConfigCommand) semiSyncConfig(cfg *mysql.ProxySQLConfWriter) {
 	cfg.MysqlReplicationHostgroups = append(cfg.MysqlReplicationHostgroups, map[string]string{
-		"writer_hostgroup": "30",
-		"reader_hostgroup": "40",
+		"writer_hostgroup": "10",
+		"reader_hostgroup": "20",
+		"check_type":       "read_only",
 	})
 }

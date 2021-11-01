@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strconv"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -72,6 +73,8 @@ func (t *ProxySQLReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 				Password: hutil.Base64Decode(cr.Spec.ClusterUser.Password),
 			}
 			if err = t.syncProxySQLData(ctx, cr, dsn); err != nil {
+				r.Requeue = true
+				r.RequeueAfter = time.Second * 3
 				return r, err
 			}
 		}
@@ -206,11 +209,9 @@ func (t *ProxySQLReconciler) syncProxySQLData(ctx context.Context, cr *rdsv1alph
 			replicas = int(*cr.Spec.Replicas)
 		}
 
-		for _, s := range cr.Spec.Mysqls {
-			addMysqlServers = append(addMysqlServers, &mysql.TableMysqlServers{
-				Hostname: s.Host,
-				Port:     s.Port,
-			})
+		addMysqlServers, err = t.generateMysqlServers(ctx, cr)
+		if err != nil {
+			return err
 		}
 
 		for _, u := range cr.Spec.FrontendUsers {
@@ -351,4 +352,46 @@ func (t *ProxySQLReconciler) syncProxySQLData(ctx context.Context, cr *rdsv1alph
 	}
 
 	return err
+}
+
+func (t *ProxySQLReconciler) generateMysqlServers(ctx context.Context, cr *rdsv1alpha1.ProxySQL) (servers []*mysql.TableMysqlServers, err error) {
+	if cr.Spec.Mysqls.CRD != nil {
+		var mysqlCR rdsv1alpha1.Mysql
+		var namespace = cr.Namespace
+		var replicas int
+		var port int
+		if cr.Spec.Mysqls.CRD.Namespace != nil {
+			namespace = *cr.Spec.Mysqls.CRD.Namespace
+		}
+		mysqlCR.Name = cr.Spec.Mysqls.CRD.Name
+		mysqlCR.Namespace = namespace
+		if err = t.Get(ctx, client.ObjectKeyFromObject(&mysqlCR), &mysqlCR); err != nil {
+			return servers, err
+		}
+
+		if mysqlCR.Spec.Replicas != nil {
+			replicas = int(*mysqlCR.Spec.Replicas)
+		}
+
+		if cr.Spec.Mysqls.CRD.Port != nil {
+			port = *cr.Spec.Mysqls.CRD.Port
+		}
+
+		for i := 0; i < replicas; i++ {
+			servers = append(servers, &mysql.TableMysqlServers{
+				Hostname: mysqlCR.Name + "-mysql-" + strconv.Itoa(i) + "." + mysqlCR.Name + "-mysql",
+				Port:     port,
+			})
+		}
+
+	} else {
+		for _, s := range cr.Spec.Mysqls.Remote {
+			servers = append(servers, &mysql.TableMysqlServers{
+				Hostname: s.Host,
+				Port:     s.Port,
+			})
+		}
+	}
+
+	return servers, nil
 }
