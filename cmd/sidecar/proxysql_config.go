@@ -6,6 +6,7 @@ import (
 
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
 	"github.com/hakur/rds-operator/pkg/mysql"
+	"github.com/hakur/rds-operator/pkg/types"
 	hutil "github.com/hakur/util"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -120,8 +121,8 @@ func (t *ProxySQLConfigCommand) Action(ctx *kingpin.ParseContext) (err error) {
 
 func (t *ProxySQLConfigCommand) mgrspConfig(cfg *mysql.ProxySQLConfWriter) {
 	cfg.MysqlGroupReplicationHostgroups = append(cfg.MysqlGroupReplicationHostgroups, map[string]string{
-		"writer_hostgroup":        "10",
-		"reader_hostgroup":        "20",
+		"writer_hostgroup":        strconv.Itoa(types.ProxySQLWriterGroup),
+		"reader_hostgroup":        strconv.Itoa(types.ProxySQLReaderGroup),
 		"backup_writer_hostgroup": "11",
 		"offline_hostgroup":       "0",
 		"active":                  "1",
@@ -133,8 +134,8 @@ func (t *ProxySQLConfigCommand) mgrspConfig(cfg *mysql.ProxySQLConfWriter) {
 
 func (t *ProxySQLConfigCommand) mgrmpConfig(cfg *mysql.ProxySQLConfWriter) {
 	cfg.MysqlGroupReplicationHostgroups = append(cfg.MysqlGroupReplicationHostgroups, map[string]string{
-		"writer_hostgroup":        "10",
-		"reader_hostgroup":        "20",
+		"writer_hostgroup":        strconv.Itoa(types.ProxySQLWriterGroup),
+		"reader_hostgroup":        strconv.Itoa(types.ProxySQLReaderGroup),
 		"backup_writer_hostgroup": "11",
 		"offline_hostgroup":       "0",
 		"active":                  "1",
@@ -146,8 +147,8 @@ func (t *ProxySQLConfigCommand) mgrmpConfig(cfg *mysql.ProxySQLConfWriter) {
 
 func (t *ProxySQLConfigCommand) semiSyncConfig(cfg *mysql.ProxySQLConfWriter) {
 	cfg.MysqlReplicationHostgroups = append(cfg.MysqlReplicationHostgroups, map[string]string{
-		"writer_hostgroup": "10",
-		"reader_hostgroup": "20",
+		"writer_hostgroup": strconv.Itoa(types.ProxySQLWriterGroup),
+		"reader_hostgroup": strconv.Itoa(types.ProxySQLReaderGroup),
 		"check_type":       "read_only",
 	})
 }

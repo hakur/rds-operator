@@ -87,7 +87,7 @@ func (t *ProxySQLReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 func (t *ProxySQLReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&rdsv1alpha1.ProxySQL{}).
-		Owns(&corev1.Service{}).Owns(&appsv1.StatefulSet{}).Owns(&corev1.ConfigMap{}).Owns(&corev1.Secret{}).
+		Owns(&corev1.Service{}).Owns(&appsv1.StatefulSet{}).Owns(&corev1.ConfigMap{}).Owns(&corev1.Secret{}).Owns(&rdsv1alpha1.Mysql{}).
 		Complete(t)
 }
 
@@ -236,7 +236,7 @@ func (t *ProxySQLReconciler) syncProxySQLData(ctx context.Context, cr *rdsv1alph
 
 		for i := 0; i < replicas; i++ {
 			addProxySQLServers = append(addProxySQLServers, &mysql.TableProxySQLServers{
-				Hostname: cr.Name + "-" + strconv.Itoa(i) + "." + cr.Name,
+				Hostname: cr.Name + "-proxysql-" + strconv.Itoa(i) + "." + cr.Name + "-proxysql",
 			})
 		}
 
@@ -346,6 +346,8 @@ func (t *ProxySQLReconciler) syncProxySQLData(ctx context.Context, cr *rdsv1alph
 			return err
 		}
 
+		// todo : when cluster mode changed , need to adjust table mysql_replication_hostgroups and mysql_group_replication_hostgroups
+
 		if err = pa.Commit(ctx); err != nil {
 			return err
 		}
@@ -390,6 +392,13 @@ func (t *ProxySQLReconciler) generateMysqlServers(ctx context.Context, cr *rdsv1
 				Hostname: s.Host,
 				Port:     s.Port,
 			})
+		}
+	}
+
+	// must set hostgroup id for mysql server if mysql is not group replication mode, other wise mysql_servers.hostgroup_id will not auto fix by proxysql server
+	if cr.Spec.ClusterMode == rdsv1alpha1.ModeSemiSync {
+		for k := range servers {
+			servers[k].HostGroupID = types.ProxySQLWriterGroup
 		}
 	}
 

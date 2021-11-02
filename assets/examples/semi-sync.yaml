@@ -26,6 +26,7 @@ spec:
     - "REPLICATION CLIENT"
     - "SELECT"
     - "SUPER"
+    - "USAGE"
   semiSync:
     doubleMasterHA: true
 ---
@@ -42,7 +43,7 @@ spec:
   mysqlVersion: "5.7.34"
   nodePort: 32338 #set to zero if want use random nodeport,delete this field will disable nodeport
   storageSize: 1Gi
-  replicas: 3
+  replicas: 1
   mysqls:
     crd: # connect mysql.rds.hakurei.cn/v1alpha1 pods
       name: semisync 
@@ -62,8 +63,8 @@ spec:
   backendUsers:
   - username: root # user on mysql server that you need create, then proxysql use this user exec sql query
     password: MTIzNDU2
-    defaultHostGroup: 30
+    defaultHostGroup: 10
   frontedUsers:
   - username: root # user auto create on proxysql server by operator, mysql client use theese user exec sql query
     password: MTIzNDU2
-    defaultHostGroup: 30
+    defaultHostGroup: 10
