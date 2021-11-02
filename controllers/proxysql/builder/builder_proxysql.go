@@ -1,14 +1,22 @@
 package builder
 
 import (
+	"encoding/base64"
+	"strconv"
+	"strings"
+
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
 	"github.com/hakur/rds-operator/pkg/reconciler"
+	hutil "github.com/hakur/util"
 	"github.com/jinzhu/copier"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// https://github.com/sysown/proxysql/issues/2464#issuecomment-633361992
+// https://proxysql.com/documentation/main-runtime/
 
 type ProxySQLBuilder struct {
 	CR *rdsv1alpha1.ProxySQL
@@ -49,9 +57,29 @@ func (t *ProxySQLBuilder) buildProxySQLVolume() (data []corev1.Volume) {
 
 // buildProxySQLEnvs generate pod environments variables
 func (t *ProxySQLBuilder) buildProxySQLEnvs() (data []corev1.EnvVar) {
+	var adminCredentials string
+	var maxWriters = 1
+
+	for _, adminUser := range t.CR.Spec.AdminUsers {
+		adminCredentials += adminUser.Username + ":" + hutil.Base64Decode(adminUser.Password) + ";"
+	}
+	adminCredentials = base64.StdEncoding.EncodeToString([]byte(strings.Trim(adminCredentials, ";")))
+
+	if t.CR.Spec.ClusterMode == rdsv1alpha1.ModeMGRMP {
+		maxWriters = 3
+	}
+
 	data = []corev1.EnvVar{
 		{Name: "POD_IP", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "status.podIP"}}},
 		{Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.name"}}},
+		{Name: "PROXYSQL_MAX_WRITE_NODES", Value: strconv.Itoa(maxWriters)},
+		{Name: "PROXYSQL_CLUSTER_USERNAME", Value: t.CR.Spec.ClusterUser.Username},
+		{Name: "PROXYSQL_CLUSTER_PASSWORD", Value: t.CR.Spec.ClusterUser.Password},
+		{Name: "MYSQL_MAX_CONNS", Value: strconv.Itoa(t.CR.Spec.MysqlMaxConn)},
+		{Name: "ADMIN_CREDENTIALS", Value: adminCredentials},
+		{Name: "MYSQL_MONITOR_USERNAME", Value: t.CR.Spec.MonitorUser.Username},
+		{Name: "MYSQL_MONITOR_PASSWORD", Value: t.CR.Spec.MonitorUser.Password},
+		{Name: "MYSQL_CLUSTER_MODE", Value: string(t.CR.Spec.ClusterMode)},
 	}
 
 	return data
@@ -61,11 +89,10 @@ func (t *ProxySQLBuilder) buildProxySQLEnvs() (data []corev1.EnvVar) {
 func (t *ProxySQLBuilder) buildProxySQLConfigContainer() (container corev1.Container) {
 	container.Image = t.CR.Spec.ConfigImage
 	container.ImagePullPolicy = t.CR.Spec.ImagePullPolicy
-	container.Name = "config"
+	container.Name = "init"
 	container.Env = t.buildProxySQLEnvs()
-	container.Env = append(container.Env, corev1.EnvVar{Name: "BOOTSTRAP_CLUSTER", Value: "false"})
-	container.Env = append(container.Env, corev1.EnvVar{Name: "CONFIG_TYPE", Value: "proxysql"})
 	container.VolumeMounts = t.buildProxySQLVolumeMounts()
+	container.Command = []string{"sidecar", "proxysql", "cfg"}
 	return container
 }
 
@@ -77,6 +104,8 @@ func (t *ProxySQLBuilder) buildProxySQLContainer() (container corev1.Container) 
 	container.Name = "proxysql"
 	container.Env = t.buildProxySQLEnvs()
 	container.VolumeMounts = t.buildProxySQLVolumeMounts()
+	container.Command = []string{"proxysql"}
+	container.Args = []string{"--foreground", "--idle-threads", "--datadir", "/var/lib/proxysql", "--config", "/etc/proxysql.cnf.d/proxysql.cnf"}
 
 	container.Resources = t.CR.Spec.Resources
 	container.LivenessProbe = t.CR.Spec.LivenessProbe
@@ -94,9 +123,10 @@ func (t *ProxySQLBuilder) BuildSts() (sts *appsv1.StatefulSet, err error) {
 	sts = new(appsv1.StatefulSet)
 
 	sts.ObjectMeta = metav1.ObjectMeta{
-		Name:      t.CR.Name + "-proxysql",
-		Namespace: t.CR.Namespace,
-		Labels:    BuildProxySQLLabels(t.CR),
+		Name:        t.CR.Name + "-proxysql",
+		Namespace:   t.CR.Namespace,
+		Labels:      BuildProxySQLLabels(t.CR),
+		Annotations: BuildProxySQLAnnotations(t.CR),
 	}
 
 	sts.TypeMeta = metav1.TypeMeta{
@@ -105,7 +135,7 @@ func (t *ProxySQLBuilder) BuildSts() (sts *appsv1.StatefulSet, err error) {
 	}
 
 	spec.Replicas = t.CR.Spec.Replicas
-	spec.ServiceName = t.CR.Name
+	spec.ServiceName = t.CR.Name + "-proxysql"
 	spec.Selector = &metav1.LabelSelector{MatchLabels: BuildProxySQLLabels(t.CR)}
 
 	podTemplateSpec.ObjectMeta = metav1.ObjectMeta{Labels: BuildProxySQLLabels(t.CR)}
@@ -139,9 +169,10 @@ func (t *ProxySQLBuilder) BuildService() (svc *corev1.Service) {
 	svc = new(corev1.Service)
 
 	svc.ObjectMeta = metav1.ObjectMeta{
-		Name:      t.CR.Name + "-proxysql",
-		Namespace: t.CR.Namespace,
-		Labels:    BuildProxySQLLabels(t.CR),
+		Name:        t.CR.Name + "-proxysql",
+		Namespace:   t.CR.Namespace,
+		Labels:      BuildProxySQLLabels(t.CR),
+		Annotations: BuildProxySQLAnnotations(t.CR),
 	}
 
 	svc.TypeMeta = metav1.TypeMeta{
@@ -177,6 +208,12 @@ func BuildProxySQLLabels(cr *rdsv1alpha1.ProxySQL) (labels map[string]string) {
 		"cr-name":   cr.Name,
 		"api-group": rdsv1alpha1.GroupVersion.Group,
 	}
-	copier.Copy(labels, cr.Labels)
+	copier.CopyWithOption(labels, cr.Labels, copier.Option{DeepCopy: true})
 	return labels
+}
+
+func BuildProxySQLAnnotations(cr *rdsv1alpha1.ProxySQL) (annoations map[string]string) {
+	annoations = map[string]string{}
+	copier.CopyWithOption(annoations, cr.Annotations, copier.Option{DeepCopy: true})
+	return annoations
 }

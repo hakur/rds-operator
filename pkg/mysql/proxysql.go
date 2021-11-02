@@ -8,13 +8,16 @@ import (
 var numberRegxp = regexp.MustCompile(`^\d+$`)
 
 type ProxySQLConfWriter struct {
-	Datadir         string
-	AdminVariables  map[string]string
-	MysqlVariables  map[string]string
-	MysqlServers    []map[string]string
-	MysqlUsers      []map[string]string
-	MysqlQueryRules []map[string]string
-	Scheduler       []map[string]string
+	Datadir                         string
+	AdminVariables                  map[string]string
+	MysqlVariables                  map[string]string
+	MysqlServers                    []map[string]string
+	MysqlUsers                      []map[string]string
+	MysqlQueryRules                 []map[string]string
+	Scheduler                       []map[string]string
+	ProxySQLServers                 []map[string]string
+	MysqlReplicationHostgroups      []map[string]string
+	MysqlGroupReplicationHostgroups []map[string]string
 }
 
 func (t *ProxySQLConfWriter) String() (conf string) {
@@ -47,7 +50,11 @@ func (t *ProxySQLConfWriter) String() (conf string) {
 	for _, v := range t.MysqlUsers {
 		conf += "\t{ "
 		for kk, vv := range v {
-			conf += kk + "=" + t.valueWrap(vv) + ", "
+			if kk == "password" {
+				conf += kk + "=\"" + vv + "\", "
+			} else {
+				conf += kk + "=" + t.valueWrap(vv) + ", "
+			}
 		}
 		conf = strings.Trim(conf, ", ")
 		conf += " },\n"
@@ -76,6 +83,43 @@ func (t *ProxySQLConfWriter) String() (conf string) {
 		conf = strings.Trim(conf, ", ")
 		conf += " },\n"
 	}
+	conf = strings.Trim(conf, ",\n")
+	conf += "\n)\n\n"
+
+	conf += "proxysql_servers=\n(\n"
+	for _, v := range t.ProxySQLServers {
+		conf += "\t{ "
+		for kk, vv := range v {
+			conf += kk + "=" + t.valueWrap(vv) + ", "
+		}
+		conf = strings.Trim(conf, ", ")
+		conf += " },\n"
+	}
+	conf = strings.Trim(conf, ",\n")
+	conf += "\n)\n\n"
+
+	conf += "mysql_replication_hostgroups=\n(\n"
+	for _, v := range t.MysqlReplicationHostgroups {
+		conf += "\t{ "
+		for kk, vv := range v {
+			conf += kk + "=" + t.valueWrap(vv) + ", "
+		}
+		conf = strings.Trim(conf, ", ")
+		conf += " },\n"
+	}
+	conf = strings.Trim(conf, ",\n")
+	conf += "\n)\n\n"
+
+	conf += "mysql_group_replication_hostgroups=\n(\n"
+	for _, v := range t.MysqlGroupReplicationHostgroups {
+		conf += "\t{ "
+		for kk, vv := range v {
+			conf += kk + "=" + t.valueWrap(vv) + ", "
+		}
+		conf = strings.Trim(conf, ", ")
+		conf += " },\n"
+	}
+
 	conf = strings.Trim(conf, ",\n")
 	conf += "\n)\n\n"
 

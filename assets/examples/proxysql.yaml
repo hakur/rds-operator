@@ -3,44 +3,72 @@ kind: ProxySQL
 metadata:
   name: yuxing
 spec:
-  configImage: rumia/rds-sidecar
+  configImage: rumia/rds-sidecar:i8
   storageClassName: hostpath
   timeZone: Asia/Shanghai
-  image: rumia/proxysql:2.2.0
+  image: proxysql/proxysql:2.3.2 # rumia/proxysql:2.2.0 
   mysqlVersion: "5.7.34"
-  monitorUser: "monitor"
-  monitorPassword: "monitor_me"
-  adminUser: admin
-  adminPassword: 123456
   nodePort: 32336 #set to zero if want use random nodeport,delete this field will disable nodeport
   storageSize: 1Gi
-  readinessProbe:
-    exec:
-      command:
-        - /bin/bash
-        - -c
-        - |
-          mysqladmin ping -u${PROXYSQL_ADMIN_USER} -p${PROXYSQL_ADMIN_PASSWORD} -p6032 -h127.0.0.1 > /dev/null 2>&1
-          if [ $? != 0 ];then
-            echo "proxysql 6032 not ready"
-            exit 1
-          fi
-    initialDelaySeconds: 5
-    periodSeconds: 5
-    timeoutSeconds: 4
-    failureThreshold: 10
-  livenessProbe:
-    exec:
-        command:
-        - /bin/bash
-        - -c
-        - |
-          mysqladmin ping -u${PROXYSQL_ADMIN_USER} -p${PROXYSQL_ADMIN_PASSWORD} -p6032 -h127.0.0.1 > /dev/null 2>&1
-          if [ $? != 0 ];then
-            echo "proxysql 6032 not ready"
-            exit 1
-          fi
-    initialDelaySeconds: 5
-    periodSeconds: 5
-    timeoutSeconds: 4
-    failureThreshold: 10
+  replicas: 3
+  mysqls:
+    crd: # connect mysql.rds.hakurei.cn/v1alpha1 pods
+      name: yuxing 
+    # remote: # if field mysqls.crd declered and it not nil, this field will not working
+    # - host: yuxing-mysql-0.yuxing-mysql # pod dsn names or remote mysql servers like 171.223.203.139, in other way, make proxysql pod can connect this address
+    #   port: 3306
+    # - host: yuxing-mysql-1.yuxing-mysql
+    #   port: 3306
+    # - host: yuxing-mysql-2.yuxing-mysql
+    #   port: 3306
+  mysqlMaxConn: 200
+  clusterMode: MGRSP
+  monitorUser:
+    username: replication # user on mysql server that you need create
+    password: cmVwbGljYXRpb25fcGFzc3dvcmQ=
+  clusterUser: # cluster user must exists and has same password in adminUsers
+    username: yuxing # user will auto create on proxysql server by operator
+    password: cmVwbGljYXRpb25fcGFzc3dvcmQ=
+  adminUsers: # most times, only need two user
+  - username: admin # user admin could not remote login
+    password: cmVwbGljYXRpb25fcGFzc3dvcmQ=
+  - username: yuxing # other user can remote login, operator use this user to management proxysql servers
+    password: cmVwbGljYXRpb25fcGFzc3dvcmQ=
+  backendUsers:
+  - username: root # user on mysql server that you need create, then proxysql use this user exec sql query
+    password: MTIzNDU2
+    defaultHostGroup: 10
+  frontedUsers:
+  - username: root # user auto create on proxysql server by operator, mysql client use theese user exec sql query
+    password: MTIzNDU2
+    defaultHostGroup: 10
+  # readinessProbe: # if you want use theese checker, need set image to rumia/proxysql:2.2.0. this image has been added mysql command
+  #   exec:
+  #     command:
+  #       - /bin/bash
+  #       - -c
+  #       - |
+  #         mysqladmin ping -u${PROXYSQL_ADMIN_USER} -p${PROXYSQL_ADMIN_PASSWORD} -p6032 -h127.0.0.1 > /dev/null 2>&1
+  #         if [ $? != 0 ];then
+  #           echo "proxysql 6032 not ready"
+  #           exit 1
+  #         fi
+  #   initialDelaySeconds: 5
+  #   periodSeconds: 5
+  #   timeoutSeconds: 4
+  #   failureThreshold: 10
+  # livenessProbe:
+  #   exec:
+  #       command:
+  #       - /bin/bash
+  #       - -c
+  #       - |
+  #         mysqladmin ping -u${PROXYSQL_ADMIN_USER} -p${PROXYSQL_ADMIN_PASSWORD} -p6032 -h127.0.0.1 > /dev/null 2>&1
+  #         if [ $? != 0 ];then
+  #           echo "proxysql 6032 not ready"
+  #           exit 1
+  #         fi
+  #   initialDelaySeconds: 5
+  #   periodSeconds: 5
+  #   timeoutSeconds: 4
+  #   failureThreshold: 10

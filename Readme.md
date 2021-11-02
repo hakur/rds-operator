@@ -17,9 +17,13 @@
     * redis version
         - [x] 6.2.5
             - [x] redis cluster with predixy
-            
 
-    * mongo.rds.hakurei.cn/v1alpha1 (in plan)
+* proxysql.rds.hakurei.cn/v1alpha1
+    * version: 2.x , current 2.2.x 2.3.x supported
+    * limits
+        * not support mysql cluster mode changed, such as from semi sync replication to group replication
+
+* mongo.rds.hakurei.cn/v1alpha1 (in plan)
         
 * mutating adminssion webhook (in plan)
 

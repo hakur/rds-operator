@@ -32,6 +32,7 @@ var (
 	enableLeaderElection = kingpin.Flag("leader-elect", "is enable multi operators leader election ，only one operator pod work if enabled leader election").Default("false").Bool()
 	namespaceFilter      = kingpin.Flag("namespace", "namespace for crd watching,watch all namespaces if value is empty").Default(util.EnvOrDefault("NAMESPACE", "")).String()
 	logLevel             = kingpin.Flag("log-level", "log level this application").Default(util.EnvOrDefault("LOG_LEVEL", "info")).String()
+	runController        = kingpin.Flag("run-controller", "run specific operator controller").Default("all").Enum("all", "mysql", "mysqlBackup", "proxysql", "redis")
 )
 
 func init() {
@@ -67,34 +68,42 @@ func main() {
 		logrus.WithField("err", err.Error()).Fatal("run operator controller manager failed")
 	}
 
-	if err = (&rediscontrollers.RedisReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		logrus.WithField("err", err.Error()).WithField("controller", "Redis").Fatal("could not set up redis.rds.hakurei.cn controller with manager")
+	if *runController == "all" || *runController == "redis" {
+		if err = (&rediscontrollers.RedisReconciler{
+			Client: mgr.GetClient(),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			logrus.WithField("err", err.Error()).WithField("controller", "Redis").Fatal("could not set up redis.rds.hakurei.cn controller with manager")
+		}
 	}
 
-	if err = (&mysqlcontrollers.MysqlReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		logrus.WithField("err", err.Error()).WithField("controller", "Mysql").Fatal("could not set up mysqls.rds.hakurei.cn controller with manager")
+	if *runController == "all" || *runController == "mysql" {
+		if err = (&mysqlcontrollers.MysqlReconciler{
+			Client: mgr.GetClient(),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			logrus.WithField("err", err.Error()).WithField("controller", "Mysql").Fatal("could not set up mysqls.rds.hakurei.cn controller with manager")
+		}
 	}
 
-	if err = (&proxysqlcontrollers.ProxySQLReconciler{
-		Client:     mgr.GetClient(),
-		Scheme:     mgr.GetScheme(),
-		RestConfig: mgr.GetConfig(),
-	}).SetupWithManager(mgr); err != nil {
-		logrus.WithField("err", err.Error()).WithField("controller", "ProxySQL").Fatal("could not set up proxysqls.rds.hakurei.cn controller with manager")
+	if *runController == "all" || *runController == "proxysql" {
+		if err = (&proxysqlcontrollers.ProxySQLReconciler{
+			Client:     mgr.GetClient(),
+			Scheme:     mgr.GetScheme(),
+			RestConfig: mgr.GetConfig(),
+		}).SetupWithManager(mgr); err != nil {
+			logrus.WithField("err", err.Error()).WithField("controller", "ProxySQL").Fatal("could not set up proxysqls.rds.hakurei.cn controller with manager")
+		}
 	}
 
-	if err = (&mysqlbackups.MysqlBackupReconciler{
-		Client:     mgr.GetClient(),
-		Scheme:     mgr.GetScheme(),
-		RestConfig: mgr.GetConfig(),
-	}).SetupWithManager(mgr); err != nil {
-		logrus.WithField("err", err.Error()).WithField("controller", " MysqlBackup").Fatal("could not set up mysqlbackups.rds.hakurei.cn controller with manager")
+	if *runController == "all" || *runController == "mysqlBackup" {
+		if err = (&mysqlbackups.MysqlBackupReconciler{
+			Client:     mgr.GetClient(),
+			Scheme:     mgr.GetScheme(),
+			RestConfig: mgr.GetConfig(),
+		}).SetupWithManager(mgr); err != nil {
+			logrus.WithField("err", err.Error()).WithField("controller", " MysqlBackup").Fatal("could not set up mysqlbackups.rds.hakurei.cn controller with manager")
+		}
 	}
 
 	//+kubebuilder:scaffold:builder

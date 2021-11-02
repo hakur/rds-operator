@@ -1053,18 +1053,6 @@ spec:
                         format: int32
                         type: integer
                     type: object
-                  pod:
-                    description: Pod pod settings
-                    properties:
-                      annotations:
-                        additionalProperties:
-                          type: string
-                        type: object
-                      labels:
-                        additionalProperties:
-                          type: string
-                        type: object
-                    type: object
                   priorityClassName:
                     description: PriorityClassName pod priority class name for all
                       pods under CR resource

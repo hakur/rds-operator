@@ -15,9 +15,10 @@ func buildPredixySvc(cr *rdsv1alpha1.Redis) (svc *corev1.Service) {
 	svc = new(corev1.Service)
 
 	svc.ObjectMeta = metav1.ObjectMeta{
-		Name:      cr.Name + "-predixy",
-		Namespace: cr.Namespace,
-		Labels:    buildPredixyLabels(cr),
+		Name:        cr.Name + "-predixy",
+		Namespace:   cr.Namespace,
+		Labels:      buildPredixyLabels(cr),
+		Annotations: buildPredixyAnnotations(cr),
 	}
 
 	svc.TypeMeta = metav1.TypeMeta{
@@ -47,8 +48,14 @@ func buildPredixyLabels(cr *rdsv1alpha1.Redis) (labels map[string]string) {
 		"cr-name":   cr.Name,
 		"api-group": rdsv1alpha1.GroupVersion.Group,
 	}
-	copier.Copy(labels, cr.Labels)
+	copier.CopyWithOption(labels, cr.Labels, copier.Option{DeepCopy: true})
 	return labels
+}
+
+func buildPredixyAnnotations(cr *rdsv1alpha1.Redis) (annoations map[string]string) {
+	annoations = map[string]string{}
+	copier.CopyWithOption(annoations, cr.Annotations, copier.Option{DeepCopy: true})
+	return annoations
 }
 
 // buildPredixyContainer generate Predixy container

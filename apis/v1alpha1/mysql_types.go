@@ -36,12 +36,16 @@ type MysqlSemiSyncOptions struct {
 	DoubleMasterHA bool `json:"doubleMasterHA,omitempty"`
 }
 
-// MysqlUser mysql user settings
-type MysqlUser struct {
+type MysqlSimpleUserInfo struct {
 	// Username mysql login account name
 	Username string `json:"username"`
 	// Password mysql login password of this user
 	Password string `json:"password"`
+}
+
+// MysqlUser mysql user settings
+type MysqlUser struct {
+	MysqlSimpleUserInfo `json:",inline"`
 	// Privileges mysql grant sql privileges, for example : []stirng{ "SELECT" ,"REPLICATION CLIENT"} or []string{"ALL PRIVILEGES"}
 	Privileges []string `json:"privileges"`
 	// Domain user login domain , for example : '%'
