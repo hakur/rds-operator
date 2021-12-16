@@ -17,6 +17,7 @@ import (
 	"github.com/hakur/rds-operator/pkg/reconciler"
 	"github.com/hakur/rds-operator/pkg/types"
 	"github.com/hakur/rds-operator/util"
+	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 )
 
 const (
@@ -33,6 +34,8 @@ type MysqlReconciler struct {
 //+kubebuilder:rbac:groups=rds.hakurei.cn,resources=mysqls,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=rds.hakurei.cn,resources=mysqls/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=rds.hakurei.cn,resources=mysqls/finalizers,verbs=update
+//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=podmonitors,verbs=get;list;watch;create;update;delete
+//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=v1,resources=service,verbs=get;list;watch;create;update;delete
@@ -123,11 +126,42 @@ func (t *MysqlReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Mysql) (err
 		return err
 	}
 
+	if cr.Spec.Monitor != nil {
+		if err = t.applyServiceMonitor(ctx, cr); err != nil {
+			return err
+		}
+	}
+
 	if err = reconciler.RemovePVCRetentionMark(t.Client, ctx, cr.Namespace, reconciler.BuildCRPVCLabels(cr, cr)); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (t *MysqlReconciler) applyServiceMonitor(ctx context.Context, cr *rdsv1alpha1.Mysql) (err error) {
+	data := builder.BuildPodMonitor(cr)
+	var oldData monitorv1.PodMonitor
+
+	if err := t.Get(ctx, client.ObjectKeyFromObject(data), &oldData); err != nil {
+		println("---", oldData.Name)
+		if err := client.IgnoreNotFound(err); err == nil {
+			// if service monitor not exists, create it now
+			if err := t.Create(ctx, data); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	} else {
+		// if service monitor exists, update it now
+		data.ResourceVersion = oldData.ResourceVersion
+		if err := t.Update(ctx, data); err != nil {
+			return err
+		}
+	}
+
+	return
 }
 
 // applyMysql create or update mysql resources
@@ -174,6 +208,7 @@ func (t *MysqlReconciler) applyMysql(ctx context.Context, cr *rdsv1alpha1.Mysql)
 
 // clean unreferenced sub resources
 func (t *MysqlReconciler) clean(ctx context.Context, cr *rdsv1alpha1.Mysql) (err error) {
+	// here write manual clean codes due to controller runtime SetOwnerRef is not stable
 	// clean mysql sub resources
 	var mysqlStatefulSets appsv1.StatefulSetList
 	if err = t.List(ctx, &mysqlStatefulSets, client.InNamespace(cr.Namespace), client.MatchingLabels(builder.BuildMysqlLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
@@ -213,6 +248,18 @@ func (t *MysqlReconciler) clean(ctx context.Context, cr *rdsv1alpha1.Mysql) (err
 	if err = t.List(ctx, &secrets, client.InNamespace(cr.Namespace), client.MatchingLabels(builder.BuildMysqlLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
 		for _, v := range secrets.Items {
 			if err = t.Delete(ctx, &v); err != nil && client.IgnoreNotFound(err) != nil {
+				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
+			}
+		}
+	} else {
+		return fmt.Errorf("delete sub resource failed,[namespace=%s] [api=%s] [kind=%s] [cr=%s] , err is -> %s", cr.Namespace, cr.APIVersion, cr.Kind, cr.Name, err.Error())
+	}
+
+	// clean service monitor
+	var monitors monitorv1.PodMonitorList
+	if err = t.List(ctx, &monitors, client.InNamespace(cr.Namespace), client.MatchingLabels(builder.BuildMysqlLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+		for _, v := range monitors.Items {
+			if err = t.Delete(ctx, v); err != nil && client.IgnoreNotFound(err) != nil {
 				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())
 			}
 		}

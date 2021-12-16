@@ -191,6 +191,10 @@ func (t *MysqlBuilder) BuildSts() (sts *appsv1.StatefulSet, err error) {
 	podTemplateSpec.Spec.Affinity = t.CR.Spec.Affinity
 	podTemplateSpec.Spec.Tolerations = t.CR.Spec.Tolerations
 
+	if t.CR.Spec.Monitor != nil {
+		podTemplateSpec.Spec.Containers = append(podTemplateSpec.Spec.Containers, buildMysqlExporter(t.CR))
+	}
+
 	quantity, err := resource.ParseQuantity(t.CR.Spec.StorageSize)
 	if err != nil {
 		return nil, err
@@ -227,6 +231,7 @@ func (t *MysqlBuilder) BuildService(cr *rdsv1alpha1.Mysql) (svc *corev1.Service)
 	spec.Selector = BuildMysqlLabels(t.CR)
 
 	spec.Ports = []corev1.ServicePort{
+		{Name: "metrics", Port: 9104},
 		{Name: "mysql", Port: 3306},
 		{Name: "mysql-mgr", Port: 33061},
 		{Name: "galera-replication", Port: 4444},
@@ -258,6 +263,7 @@ func (t *MysqlBuilder) BuildContainerServices(cr *rdsv1alpha1.Mysql) (services [
 		spec.Selector["statefulset.kubernetes.io/pod-name"] = cr.Name + "-mysql-" + strconv.Itoa(i)
 
 		spec.Ports = []corev1.ServicePort{
+			{Name: "metrics", Port: 9104},
 			{Name: "mysql", Port: 3306},
 			{Name: "mysql-mgr", Port: 33061},
 			{Name: "galera-replication", Port: 4444},

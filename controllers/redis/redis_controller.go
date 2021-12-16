@@ -19,6 +19,8 @@ const RedisFinlizer = "redis.rds.hakurei.cn/v1alpha1"
 //+kubebuilder:rbac:groups=rds.hakurei.cn,resources=redis,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=rds.hakurei.cn,resources=redis/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=rds.hakurei.cn,resources=redis/finalizers,verbs=update
+//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=podmonitors,verbs=get;list;watch;create;update;delete
+//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;delete
 //+kubebuilder:rbac:groups=v1,resources=service,verbs=get;list;watch;create;update;delete

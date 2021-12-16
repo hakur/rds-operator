@@ -8,18 +8,22 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	scm "sigs.k8s.io/controller-runtime/pkg/scheme"
 
-	"github.com/bombsimon/logrusr"
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
 	mysqlcontrollers "github.com/hakur/rds-operator/controllers/mysql"
 	mysqlbackups "github.com/hakur/rds-operator/controllers/mysql_backup"
 	proxysqlcontrollers "github.com/hakur/rds-operator/controllers/proxysql"
 	rediscontrollers "github.com/hakur/rds-operator/controllers/redis"
 	"github.com/hakur/rds-operator/util"
+
+	"github.com/bombsimon/logrusr/v2"
+	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 	//+kubebuilder:scaffold:imports
@@ -47,12 +51,19 @@ func init() {
 	if err != nil {
 		logrus.Fatal("log level=[%s] is invalid", logLevel)
 	}
+
 	logrus.SetFormatter(customFormatter)
 	logrus.SetLevel(parsedLevel)
+	logrus.SetReportCaller(true)
+
+	// let controllers can list/get/delete/update/create
+	prometheusOperatorSchema := scm.Builder{GroupVersion: schema.GroupVersion{Group: "monitoring.coreos.com", Version: "v1"}}
+	prometheusOperatorSchema.Register(&monitorv1.ServiceMonitor{}, &monitorv1.ServiceMonitorList{}, &monitorv1.PodMonitor{}, &monitorv1.PodMonitorList{})
+	prometheusOperatorSchema.AddToScheme(scheme)
 }
 
 func main() {
-	ctrl.SetLogger(logrusr.NewLogger(logrus.StandardLogger()))
+	ctrl.SetLogger(logrusr.New(logrus.StandardLogger()))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
