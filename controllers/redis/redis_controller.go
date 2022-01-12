@@ -7,6 +7,7 @@ import (
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
 	"github.com/hakur/rds-operator/pkg/reconciler"
 	"github.com/hakur/rds-operator/util"
+	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -139,11 +140,41 @@ func (t *RedisReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Redis) (err
 		}
 	}
 
+	if cr.Spec.Monitor != nil {
+		if err = t.applyMonitor(ctx, cr); err != nil {
+			return err
+		}
+	}
+
 	if err = reconciler.RemovePVCRetentionMark(t.Client, ctx, cr.Namespace, reconciler.BuildCRPVCLabels(cr, cr)); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (t *RedisReconciler) applyMonitor(ctx context.Context, cr *rdsv1alpha1.Redis) (err error) {
+	data := BuildPodMonitor(cr)
+	var oldData monitorv1.PodMonitor
+
+	if err := t.Get(ctx, client.ObjectKeyFromObject(data), &oldData); err != nil {
+		if err := client.IgnoreNotFound(err); err == nil {
+			// if service monitor not exists, create it now
+			if err := t.Create(ctx, data); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	} else {
+		// if service monitor exists, update it now
+		data.ResourceVersion = oldData.ResourceVersion
+		if err := t.Update(ctx, data); err != nil {
+			return err
+		}
+	}
+
+	return
 }
 
 // clean remove sub resources

@@ -40,39 +40,39 @@ func buildMysqlExporter(cr *rdsv1alpha1.Mysql) (container corev1.Container) {
 	return
 }
 
-func BuildServiceMonitor(cr *rdsv1alpha1.Mysql) (sm *monitorv1.ServiceMonitor) {
-	sm = new(monitorv1.ServiceMonitor)
+// func BuildServiceMonitor(cr *rdsv1alpha1.Mysql) (sm *monitorv1.ServiceMonitor) {
+// 	sm = new(monitorv1.ServiceMonitor)
 
-	sm.TypeMeta = metav1.TypeMeta{
-		Kind:       "ServiceMonitor",
-		APIVersion: "monitoring.coreos.com/v1",
-	}
+// 	sm.TypeMeta = metav1.TypeMeta{
+// 		Kind:       "ServiceMonitor",
+// 		APIVersion: "monitoring.coreos.com/v1",
+// 	}
 
-	labels := BuildMysqlLabels(cr)
+// 	labels := BuildMysqlLabels(cr)
 
-	sm.ObjectMeta = metav1.ObjectMeta{
-		Name:      cr.Name + "-mysql-sm",
-		Namespace: cr.Namespace,
-		Labels:    labels,
-	}
+// 	sm.ObjectMeta = metav1.ObjectMeta{
+// 		Name:      cr.Name + "-mysql-sm",
+// 		Namespace: cr.Namespace,
+// 		Labels:    labels,
+// 	}
 
-	sm.Spec = monitorv1.ServiceMonitorSpec{
-		Endpoints: []monitorv1.Endpoint{
-			{
-				Port:     "metrics",
-				Interval: cr.Spec.Monitor.Interval,
-			},
-		},
-		NamespaceSelector: monitorv1.NamespaceSelector{
-			MatchNames: []string{cr.Namespace},
-		},
-		Selector: metav1.LabelSelector{
-			MatchLabels: labels,
-		},
-	}
+// 	sm.Spec = monitorv1.ServiceMonitorSpec{
+// 		Endpoints: []monitorv1.Endpoint{
+// 			{
+// 				Port:     "metrics",
+// 				Interval: cr.Spec.Monitor.Interval,
+// 			},
+// 		},
+// 		NamespaceSelector: monitorv1.NamespaceSelector{
+// 			MatchNames: []string{cr.Namespace},
+// 		},
+// 		Selector: metav1.LabelSelector{
+// 			MatchLabels: labels,
+// 		},
+// 	}
 
-	return
-}
+// 	return
+// }
 
 func BuildPodMonitor(cr *rdsv1alpha1.Mysql) (mon *monitorv1.PodMonitor) {
 	mon = new(monitorv1.PodMonitor)

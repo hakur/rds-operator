@@ -127,7 +127,7 @@ func (t *MysqlReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Mysql) (err
 	}
 
 	if cr.Spec.Monitor != nil {
-		if err = t.applyServiceMonitor(ctx, cr); err != nil {
+		if err = t.applyMonitor(ctx, cr); err != nil {
 			return err
 		}
 	}
@@ -139,12 +139,11 @@ func (t *MysqlReconciler) apply(ctx context.Context, cr *rdsv1alpha1.Mysql) (err
 	return nil
 }
 
-func (t *MysqlReconciler) applyServiceMonitor(ctx context.Context, cr *rdsv1alpha1.Mysql) (err error) {
+func (t *MysqlReconciler) applyMonitor(ctx context.Context, cr *rdsv1alpha1.Mysql) (err error) {
 	data := builder.BuildPodMonitor(cr)
 	var oldData monitorv1.PodMonitor
 
 	if err := t.Get(ctx, client.ObjectKeyFromObject(data), &oldData); err != nil {
-		println("---", oldData.Name)
 		if err := client.IgnoreNotFound(err); err == nil {
 			// if service monitor not exists, create it now
 			if err := t.Create(ctx, data); err != nil {

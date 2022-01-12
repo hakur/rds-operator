@@ -108,6 +108,39 @@ type RedisClusterProxy struct {
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty" protobuf:"bytes,11,opt,name=readinessProbe"`
 }
 
+type RedisMonitor struct {
+	// Image oliver006/redis_exporter image
+	Image string `json:"image"`
+	// Args container run args
+	Args []string `json:"args,omitempty"`
+	// Args
+	// Interval service monitor interval
+	Interval string `json:"interval,omitempty"`
+	// Compute Resources required by this container.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+	// +optional
+	Resources corev1.ResourceRequirements `json:"resources,omitempty" protobuf:"bytes,8,opt,name=resources"`
+	// Periodic probe of container liveness.
+	// Container will be restarted if the probe fails.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+	// +optional
+	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty" protobuf:"bytes,10,opt,name=livenessProbe"`
+	// Periodic probe of container service readiness.
+	// Container will be removed from service endpoints if the probe fails.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+	// +optional
+	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty" protobuf:"bytes,11,opt,name=readinessProbe"`
+	// PVCRetentionSeconds pvc retention seconds after CR has been deleted
+	// after pvc deleted, a deadline annotations will add to pvc.
+	// if deadline reached (default time.Now().Unix() + PVCRetentionSeconds), and CR not found(filtered by labels), pvc will be deleted by operator.
+	// if before deadline, a new CR with same labels of pvc created. pvc deadline annotation will be removed.
+	// if this field value is nil, types.PVCDeleteRetentionSeconds will be default value to this field
+	// if this field value is zero, pvc will alive forever
+}
+
 // RedisSpec redis cluster spec
 type RedisSpec struct {
 	// Password 密码
@@ -142,7 +175,8 @@ type RedisSpec struct {
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty" protobuf:"bytes,8,opt,name=resources"`
 	// PriorityClassName redis and redis-cluster-proxy pods pod priority class name
-	PriorityClassName string `json:"priorityClassName,omitempty" protobuf:"bytes,24,opt,name=priorityClassName"`
+	PriorityClassName string        `json:"priorityClassName,omitempty" protobuf:"bytes,24,opt,name=priorityClassName"`
+	Monitor           *RedisMonitor `json:"monitor,omitempty"`
 }
 
 // RedisStatus bootstrap process status
