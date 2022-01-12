@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	rdsv1alpha1 "github.com/hakur/rds-operator/apis/v1alpha1"
+	hutil "github.com/hakur/util"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -22,7 +23,7 @@ func buildSecret(cr *rdsv1alpha1.Redis) (secret *corev1.Secret) {
 	secret.Labels = buildRedisLabels(cr)
 
 	if cr.Spec.Password != nil {
-		redisPassword = *cr.Spec.Password
+		redisPassword = hutil.Base64Decode(*cr.Spec.Password)
 	}
 
 	if cr.Spec.Password == nil {

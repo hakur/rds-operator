@@ -37,6 +37,11 @@ func buildRedisSts(cr *rdsv1alpha1.Redis) (sts *appsv1.StatefulSet, err error) {
 
 	podTemplateSpec.ObjectMeta = metav1.ObjectMeta{Labels: buildRedisLabels(cr)}
 	podTemplateSpec.Spec.Containers = []corev1.Container{buildRedisContainer(cr)}
+
+	if cr.Spec.Monitor != nil {
+		podTemplateSpec.Spec.Containers = append(podTemplateSpec.Spec.Containers, buildRedisExporter(cr))
+	}
+
 	podTemplateSpec.Spec.ServiceAccountName = cr.Spec.ServiceAccountName
 	podTemplateSpec.Spec.Affinity = cr.Spec.Affinity
 	podTemplateSpec.Spec.Tolerations = cr.Spec.Tolerations
