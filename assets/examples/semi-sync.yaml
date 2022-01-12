@@ -4,11 +4,11 @@ metadata:
   name: semisync
 spec:
   imagePullPolicy: IfNotPresent
-  rootPassword: MTIzNDU2
+  rootPassword: MTIzNDU2 # mysql root password, only for initialize mysql
   clusterMode: SemiSync
   storageClassName: hostpath
   timeZone: Asia/Shanghai
-  configImage: rumia/rds-sidecar:v0.0.1
+  configImage: rumia/rds-sidecar:issue-9
   image: mysql/mysql-server:5.7.34
   replicas: 4
   storageSize: 1Gi
@@ -16,7 +16,7 @@ spec:
   whitelist: # most of time , it's kubernetes Pod CIDR and Service CIDR
     - "10.0.0.0/8"
   extraConfigDir: /etc/my.cnf.d/
-  clusterUser: # user will create when mysql initialization
+  clusterUser: # user will create on mysql server when mysql first build up, if you exec mysql password change command , you need manually modify this field。 if this field is wrong, operator will not auto fix mysql cluster healthy status. this user also used for cluster set up
     username: replication
     password: cmVwbGljYXRpb25fcGFzc3dvcmQ=
     databaseTarget: "*.*"
@@ -29,6 +29,53 @@ spec:
     - "USAGE"
   semiSync:
     doubleMasterHA: true
+  monitor: # if this field is not nil, will mysqld-exporter to mysql pod
+    image: prom/mysqld-exporter:v0.13.0
+    user: # user will create on mysql server when mysql first build up, if you exec mysql password change command , you need manually modify this field
+      username: metrics
+      password: bWV0cmljcw==
+      databaseTarget: "*.*"
+      domain: "localhost"
+      privileges:
+      - PROCESS
+      - REPLICATION CLIENT
+      - SELECT
+    interval: 15s
+    args:
+    - --collect.auto_increment.columns
+    - --collect.binlog_size
+    - --collect.engine_innodb_status
+    - --collect.global_status
+    - --collect.global_variables
+    - --collect.info_schema.clientstats
+    - --collect.info_schema.innodb_metrics
+    - --collect.info_schema.innodb_tablespaces
+    - --collect.info_schema.innodb_cmp
+    - --collect.info_schema.innodb_cmpmem
+    - --collect.info_schema.processlist
+    - --collect.info_schema.query_response_time
+    - --collect.info_schema.replica_host
+    - --collect.info_schema.tables
+    - --collect.info_schema.tablestats
+    - --collect.info_schema.schemastats
+    - --collect.info_schema.userstats
+    - --collect.mysql.user
+    - --collect.perf_schema.eventsstatements
+    - --collect.perf_schema.eventsstatementssum
+    - --collect.perf_schema.eventswaits
+    - --collect.perf_schema.file_events
+    - --collect.perf_schema.file_instances
+    - --collect.perf_schema.indexiowaits
+    - --collect.perf_schema.memory_events
+    - --collect.perf_schema.tableiowaits
+    - --collect.perf_schema.tablelocks
+    - --collect.perf_schema.replication_group_members
+    - --collect.perf_schema.replication_group_member_stats
+    - --collect.perf_schema.replication_applier_status_by_worker
+    - --collect.slave_status
+    - --collect.slave_hosts
+    - --collect.heartbeat
+    - --collect.heartbeat.utc
 ---
 
 apiVersion: rds.hakurei.cn/v1alpha1
@@ -36,7 +83,7 @@ kind: ProxySQL
 metadata:
   name: semisync
 spec:
-  configImage: rumia/rds-sidecar:i8
+  configImage: rumia/rds-sidecar:issue-9
   storageClassName: hostpath
   timeZone: Asia/Shanghai
   image: rumia/proxysql:2.2.0 # proxysql/proxysql:2.3.2

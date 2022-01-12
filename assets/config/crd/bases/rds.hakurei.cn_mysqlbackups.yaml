@@ -878,7 +878,7 @@ spec:
                     type: object
                 type: object
               args:
-                description: Command Kafka container command args
+                description: Args container run args
                 items:
                   type: string
                 type: array
@@ -886,7 +886,7 @@ spec:
                 description: ClusterMode mysql cluster mode
                 type: string
               command:
-                description: Command Kafka container command
+                description: Command container run command
                 items:
                   type: string
                 type: array

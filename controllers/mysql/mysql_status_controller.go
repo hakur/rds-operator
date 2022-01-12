@@ -80,6 +80,8 @@ func (t *MysqlReconciler) checkClusterStatus(ctx context.Context, cr *rdsv1alpha
 
 	if !reflect.DeepEqual(masterHosts, cr.Status.Masters) {
 		// master changed, need to notify mysql proxy middleware
+		// in MYSQL mgr mode, proxysql already automatic modified master address on itself
+		// in mysql semi sync mode, mysql master hosts are fixed , such as mysql-0 and mysql-1, no need to modify proxysql mysql master info
 		logrus.Debug("master list changed, need to notify mysql proxy middleware")
 	}
 

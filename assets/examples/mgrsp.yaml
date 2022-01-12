@@ -8,7 +8,7 @@ spec:
   clusterMode: MGRSP
   storageClassName: hostpath
   timeZone: Asia/Shanghai
-  configImage: rumia/rds-sidecar:v0.0.1
+  configImage: rumia/rds-sidecar:issue-9
   image: mysql/mysql-server:5.7.34
   replicas: 3
   storageSize: 1Gi
@@ -27,38 +27,46 @@ spec:
     - "SELECT"
     - "SUPER"
     - "USAGE"
-    
-    # readinessProbe:
-    #   exec:
-    #     command:
-    #     - /bin/bash
-    #     - -c
-    #     - |
-    #       mysqladmin ping -u root -p${MYSQL_ROOT_PASSWORD} > /dev/null 2>&1
-    #       if [ $? != 0 ];then
-    #         echo "mysql 3306 not ready"
-    #         exit 1
-    #       fi
-    #   initialDelaySeconds: 5
-    #   periodSeconds: 5
-    #   timeoutSeconds: 4
-    #   failureThreshold: 10
-    # livenessProbe:
-    #   exec:
-    #     command:
-    #     - /bin/bash
-    #     - -c
-    #     - |
-    #       primaryServer=$(mysql -uroot -p${MYSQL_ROOT_PASSWORD} -N -s -e "show status like 'group_replication_primary_member';" | awk '{print $2}')
-    #       if [ "$primaryServer" != "" ];then
-    #         exit 0
-    #       fi
-    #       echo "mysql primary server not found, mgr cluster not health!"
-    #       exit 1
-    #   initialDelaySeconds: 5
-    #   periodSeconds: 5
-    #   timeoutSeconds: 4
-    #   failureThreshold: 10
+  # readinessProbe:
+  #   exec:
+  #     command:
+  #     - /bin/bash
+  #     - -c
+  #     - |
+  #       mysqladmin ping -u root -p${MYSQL_ROOT_PASSWORD} > /dev/null 2>&1
+  #       if [ $? != 0 ];then
+  #         echo "mysql 3306 not ready"
+  #         exit 1
+  #       fi
+  #   initialDelaySeconds: 5
+  #   periodSeconds: 5
+  #   timeoutSeconds: 4
+  #   failureThreshold: 10
+  # livenessProbe:
+  #   exec:
+  #     command:
+  #     - /bin/bash
+  #     - -c
+  #     - |
+  #       primaryServer=$(mysql -uroot -p${MYSQL_ROOT_PASSWORD} -N -s -e "show status like 'group_replication_primary_member';" | awk '{print $2}')
+  #       if [ "$primaryServer" != "" ];then
+  #         exit 0
+  #       fi
+  #       echo "mysql primary server not found, mgr cluster not health!"
+  #       exit 1
+  #   initialDelaySeconds: 5
+  #   periodSeconds: 5
+  #   timeoutSeconds: 4
+  #   failureThreshold: 10
+  monitor:
+    user: 
+      username: root
+      password: MTIzNDU2
+    image: prom/mysqld-exporter:latest
+    interval: 30s
+    # resources:
+      # limits:
+      # requests:
   
 ---
 apiVersion: rds.hakurei.cn/v1alpha1
@@ -66,7 +74,7 @@ kind: ProxySQL
 metadata:
   name: mgrsp
 spec:
-  configImage: rumia/rds-sidecar:i8
+  configImage: rumia/rds-sidecar:issue-9
   storageClassName: hostpath
   timeZone: Asia/Shanghai
   image: proxysql/proxysql:2.3.2

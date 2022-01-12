@@ -31,9 +31,9 @@ type CommonField struct {
 	Image string `json:"image"`
 	// ImagePullPolicy all pods image pull policy，value should keep with corev1.PullPolicy
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
-	// Command Kafka container command
+	// Command container run command
 	Command []string `json:"command,omitempty"`
-	// Command Kafka container command args
+	// Args container run args
 	Args []string `json:"args,omitempty"`
 	// Tolerations all pods tolerations，should keep with corev1.Toleration
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty" protobuf:"bytes,22,opt,name=tolerations"`

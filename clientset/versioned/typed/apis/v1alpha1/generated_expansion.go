@@ -29,8 +29,6 @@ SOFTWARE.
 
 package v1alpha1
 
-type KafkaExpansion interface{}
-
 type MysqlExpansion interface{}
 
 type MysqlBackupExpansion interface{}
