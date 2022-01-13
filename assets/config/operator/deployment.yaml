@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rds-opertor
+  name: rds-operator
   labels:
-    k8s-app: rds-opertor
+    k8s-app: rds-operator
 spec:
   selector:
     matchLabels:
-      k8s-app: rds-opertor
+      k8s-app: rds-operator
   replicas: 1
   template:
     metadata:
       labels:
-        k8s-app: rds-opertor
+        k8s-app: rds-operator
     spec:
       # securityContext:
       #   runAsNonRoot: true
