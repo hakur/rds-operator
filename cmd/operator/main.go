@@ -54,7 +54,7 @@ func init() {
 
 	logrus.SetFormatter(customFormatter)
 	logrus.SetLevel(parsedLevel)
-	logrus.SetReportCaller(true)
+	// logrus.SetReportCaller(true) // bad for logrusr
 
 	// let controllers can list/get/delete/update/create
 	prometheusOperatorSchema := scm.Builder{GroupVersion: schema.GroupVersion{Group: "monitoring.coreos.com", Version: "v1"}}
@@ -131,3 +131,27 @@ func main() {
 		logrus.WithField("err", err.Error()).Fatal("start controller manager failed")
 	}
 }
+
+//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=podmonitors,verbs=get;list;watch;create;update;delete
+//+kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;watch;create;update;delete
+
+//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;delete
+//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;delete
+
+//+kubebuilder:rbac:groups=batch,resources=cronjobs,verbs=get;list;watch;create;update;delete
+//+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;delete
+
+//+kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;delete
+//+kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;delete
+
+//+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;delete;post
+//+kubebuilder:rbac:groups="",resources=pods/logs,verbs=get;post;create;list
+//+kubebuilder:rbac:groups="",resources=pods/exec,verbs=get;post;create
+
+//+kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;delete;patch
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;delete
+//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
+
+//+kubebuilder:rbac:groups=authentication.k8s.io,resources=tokenreviews,verbs=create
+//+kubebuilder:rbac:groups=authentication.k8s.io,resources=subjectaccessreviews,verbs=create
+//+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete

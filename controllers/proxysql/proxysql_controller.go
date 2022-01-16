@@ -38,15 +38,6 @@ type ProxySQLReconciler struct {
 //+kubebuilder:rbac:groups=rds.hakurei.cn,resources=proxysqls,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=rds.hakurei.cn,resources=proxysqls/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=rds.hakurei.cn,resources=proxysqls/finalizers,verbs=update
-//+kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;delete
-//+kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;delete
-//+kubebuilder:rbac:groups=v1,resources=service,verbs=get;list;watch;create;update;delete
-//+kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;delete;post
-//+kubebuilder:rbac:groups="",resources=pods/logs,verbs=get;post;create;list
-//+kubebuilder:rbac:groups="",resources=pods/exec,verbs=get;post;create
-//+kubebuilder:rbac:groups=v1,resources=configMap,verbs=get;list;watch;create;update;delete
-//+kubebuilder:rbac:groups=v1,resources=secret,verbs=get;list;watch;create;update;delete
-//+kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 
 func (t *ProxySQLReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r ctrl.Result, err error) {
 	cr := &rdsv1alpha1.ProxySQL{}

@@ -36,5 +36,5 @@ wsl2:
 ```
     ktctl connect --method=sock5 # open terminal window, notice : when pod created or deleted, must restart ktctl, otherwise you will see many context exceeded
     make dev # open new terminal window
-    make relase BRANCH=v0.0.1 PUSH=true
+    make release BRANCH=v0.0.1 PUSH=true # example make release 
 ```

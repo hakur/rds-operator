@@ -62,7 +62,7 @@ spec:
     user: 
       username: root
       password: MTIzNDU2
-    image: prom/mysqld-exporter:latest
+    image: prom/mysqld-exporter:v0.13.0
     interval: 30s
     # resources:
       # limits:

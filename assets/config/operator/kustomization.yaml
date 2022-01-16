@@ -10,5 +10,5 @@ generatorOptions:
 images:
 - name: operator
   newName: rumia/rds-operator
-  newTag: HEAD
+  newTag: v0.0.2
 namespace: kube-system
