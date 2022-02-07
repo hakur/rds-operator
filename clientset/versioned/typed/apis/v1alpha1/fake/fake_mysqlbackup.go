@@ -128,7 +128,7 @@ func (c *FakeMysqlBackups) UpdateStatus(ctx context.Context, mysqlBackup *v1alph
 // Delete takes name of the mysqlBackup and deletes it. Returns an error if one occurs.
 func (c *FakeMysqlBackups) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(mysqlbackupsResource, c.ns, name), &v1alpha1.MysqlBackup{})
+		Invokes(testing.NewDeleteActionWithOptions(mysqlbackupsResource, c.ns, name, opts), &v1alpha1.MysqlBackup{})
 
 	return err
 }

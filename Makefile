@@ -3,8 +3,6 @@ COMMIT = `git rev-parse --short HEAD`
 # Image URL to use all building/pushing image targets
 OPERATOR_IMG ?= rumia/rds-operator:$(BRANCH)
 SIDECAR_IMG ?= rumia/rds-sidecar:$(BRANCH)
-# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -17,7 +15,7 @@ SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=rds-operator webhook paths="./..." output:crd:artifacts:config=assets/config/crd/bases output:dir=assets/config/rbac
+	$(CONTROLLER_GEN) rbac:roleName=rds-operator crd webhook paths="./..." output:crd:artifacts:config=assets/config/crd/bases output:dir=assets/config/rbac
 
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
@@ -37,7 +35,7 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 
 CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.6.2)
+	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0)
 
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.

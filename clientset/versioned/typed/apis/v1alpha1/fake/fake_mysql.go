@@ -128,7 +128,7 @@ func (c *FakeMysqls) UpdateStatus(ctx context.Context, mysql *v1alpha1.Mysql, op
 // Delete takes name of the mysql and deletes it. Returns an error if one occurs.
 func (c *FakeMysqls) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(mysqlsResource, c.ns, name), &v1alpha1.Mysql{})
+		Invokes(testing.NewDeleteActionWithOptions(mysqlsResource, c.ns, name, opts), &v1alpha1.Mysql{})
 
 	return err
 }
