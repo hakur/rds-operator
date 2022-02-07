@@ -27,7 +27,7 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 ##@ Deployment
-install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
+install: kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build assets/config/crd | kubectl apply -f -
 
 uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
@@ -37,9 +37,15 @@ CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
 	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0)
 
+ifeq ($(OS),Windows_NT)
+KUSTOMIZE = $(shell pwd)/bin/kustomize.exe
+kustomize: ## Download kustomize locally if necessary.
+	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.3.0)
+else
 KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize: ## Download kustomize locally if necessary.
 	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v4@v4.3.0)
+endif
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -95,7 +101,7 @@ yaml: manifests
 
 	tar -czf release/yaml.tar.gz release/examples release/operator
 
-gen: generate manifests install
+gen: generate manifests
 	cd hack && ./update-codegen.sh
 	
 dev:
@@ -103,7 +109,7 @@ dev:
 	source hack/dev-env.sh && ./rds-operator
 
 skaffold:
-	go build -ldflags "-s -w -X github.com/hakur/rds-operator/pkg/types.Version=$(BRANCH) -X github.com/hakur/rds-operator/pkg/types.Commit=$(COMMIT)" -o rds-operator cmd/operator/main.go
+	export GOOS=linux && go build -ldflags "-s -w -X github.com/hakur/rds-operator/pkg/types.Version=$(BRANCH) -X github.com/hakur/rds-operator/pkg/types.Commit=$(COMMIT)" -o rds-operator cmd/operator/main.go
 	skaffold dev --port-forward=user,services --tail
 
 # make relase BRANCH=${version tag} PUSH=true

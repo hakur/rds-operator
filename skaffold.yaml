@@ -22,10 +22,10 @@ build:
 deploy:
   kustomize:
     paths:
-    - config/skaffold/base
+    - assets/config/skaffold/base
 profiles:
 - name: dev
   deploy:
     kustomize:
       paths:
-      - config/skaffold/dev
+      - assets/config/skaffold/dev

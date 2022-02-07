@@ -244,8 +244,8 @@ func (t *MysqlReconciler) clean(ctx context.Context, cr *rdsv1alpha1.Mysql) (err
 	}
 
 	// clean service monitor
-	var monitors monitorv1.PodMonitorList
-	if err = t.List(ctx, &monitors, client.InNamespace(cr.Namespace), client.MatchingLabels(builder.BuildMysqlLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
+	var monitors = new(monitorv1.PodMonitorList)
+	if err = t.List(ctx, monitors, client.InNamespace(cr.Namespace), client.MatchingLabels(builder.BuildMysqlLabels(cr))); err == nil && client.IgnoreNotFound(err) == nil {
 		for _, v := range monitors.Items {
 			if err = t.Delete(ctx, v); err != nil && client.IgnoreNotFound(err) != nil {
 				return fmt.Errorf("delete resource in [namespace=%s] [api=%s] [kind=%s] [name=%s] failed -> %s", v.Namespace, v.APIVersion, v.Kind, v.Name, err.Error())

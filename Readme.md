@@ -1,3 +1,7 @@
+### this repo is also an kubebuilder project exmple
+
+### brefore use release yaml of mysql. must modify storage class name and whitelist field
+
 ### crd operator contains below resources
 * mysql.rds.hakurei.cn/v1alpha1
     * mysql version
@@ -32,9 +36,21 @@
 ### develop
 use [kt-connect](https://github.com/alibaba/kt-connect) for development 
 
-wsl2:
+first of all:
+```sh
+# install crd defines
+make gen -j $(nproc)
+make install
 ```
+
+wsl2:
+```sh
     ktctl connect --method=sock5 # open terminal window, notice : when pod created or deleted, must restart ktctl, otherwise you will see many context exceeded
-    make dev # open new terminal window
-    make release BRANCH=v0.0.1 PUSH=true # example make release 
+    make dev -j $(nproc) # open new terminal window
+    make release BRANCH=v0.0.1 PUSH=true -j $(nproc) # example make release 
+```
+
+skaffold (recommend with local kubernetes):
+```sh
+    make skaffold -j $(nproc)
 ```

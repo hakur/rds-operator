@@ -6,15 +6,16 @@ spec:
   imagePullPolicy: IfNotPresent
   rootPassword: MTIzNDU2 # mysql root password, only for initialize mysql
   clusterMode: SemiSync
-  storageClassName: hostpath
+  storageClassName: standard
   timeZone: Asia/Shanghai
-  configImage: rumia/rds-sidecar:issue-9
+  configImage: rumia/rds-sidecar:v0.0.2
   image: mysql/mysql-server:5.7.34
   replicas: 4
   storageSize: 1Gi
   maxConn: 300
   whitelist: # most of time , it's kubernetes Pod CIDR and Service CIDR
     - "10.0.0.0/8"
+    - "172.0.0.0/8"
   extraConfigDir: /etc/my.cnf.d/
   clusterUser: # user will create on mysql server when mysql first build up, if you exec mysql password change command , you need manually modify this field。 if this field is wrong, operator will not auto fix mysql cluster healthy status. this user also used for cluster set up
     username: replication
@@ -80,8 +81,8 @@ kind: ProxySQL
 metadata:
   name: semisync
 spec:
-  configImage: rumia/rds-sidecar:issue-9
-  storageClassName: hostpath
+  configImage: rumia/rds-sidecar:v0.0.2
+  storageClassName: standard
   timeZone: Asia/Shanghai
   image: rumia/proxysql:2.2.0 # proxysql/proxysql:2.3.2
   mysqlVersion: "5.7.34"

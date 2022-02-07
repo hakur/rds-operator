@@ -6,15 +6,16 @@ spec:
   imagePullPolicy: IfNotPresent
   rootPassword: MTIzNDU2
   clusterMode: MGRSP
-  storageClassName: hostpath
+  storageClassName: standard
   timeZone: Asia/Shanghai
-  configImage: rumia/rds-sidecar:issue-9
+  configImage: rumia/rds-sidecar:v0.0.2
   image: mysql/mysql-server:5.7.34
   replicas: 3
   storageSize: 1Gi
   maxConn: 300
   whitelist: # most of time , it's kubernetes Pod CIDR and Service CIDR
     - "10.0.0.0/8"
+    - "172.0.0.0/8"
   extraConfigDir: /etc/my.cnf.d/
   clusterUser: # user will create when mysql initialization
     username: replication
@@ -74,8 +75,8 @@ kind: ProxySQL
 metadata:
   name: mgrsp
 spec:
-  configImage: rumia/rds-sidecar:issue-9
-  storageClassName: hostpath
+  configImage: rumia/rds-sidecar:v0.0.2
+  storageClassName: standard
   timeZone: Asia/Shanghai
   image: proxysql/proxysql:2.3.2
   mysqlVersion: "5.7.34"

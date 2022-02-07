@@ -4,7 +4,7 @@ metadata:
   name: redis
 spec:
   imagePullPolicy: IfNotPresent
-  storageClassName: hostpath
+  storageClassName: standard
   password: abc # base64 text or normal text
   masterReplicas: 3
   dataReplicas: 1

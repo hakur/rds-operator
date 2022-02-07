@@ -152,6 +152,10 @@ func AddPVCRetentionMark(c client.Client, ctx context.Context, namespace string,
 	var pvcs corev1.PersistentVolumeClaimList
 	if err = c.List(ctx, &pvcs, client.InNamespace(namespace), client.MatchingLabels(labelSelector)); err == nil {
 		for _, pvc := range pvcs.Items {
+			if pvc.Annotations == nil {
+				pvc.Annotations = make(map[string]string)
+			}
+
 			if _, ok := pvc.Annotations[types.PVCDeleteDateAnnotationName]; !ok {
 				pvc.Annotations[types.PVCDeleteDateAnnotationName] = strconv.FormatInt(time.Now().Unix()+types.PVCDeleteRetentionSeconds, 10)
 				if err = c.Update(ctx, &pvc); err != nil {
