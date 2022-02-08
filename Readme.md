@@ -6,7 +6,7 @@
 * mysql.rds.hakurei.cn/v1alpha1
     * mysql version
         - [ ] 5.7.34
-            - [x] prometheus operator service monitor
+            - [x] prometheus operator pod monitor
             - [x] MGR single primary
             - [ ] MGR multi primary
             - [x] Semi sync replication
