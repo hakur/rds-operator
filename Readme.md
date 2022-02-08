@@ -19,7 +19,7 @@
     - [ ] physical backup
 
 * redis.rds.hakurei.cn/v1alpha1
-    * - [x] prometheus operator service monitor
+    * - [x] prometheus operator pod monitor
     * redis version
         - [x] 6.2.5
             - [x] redis cluster with predixy
