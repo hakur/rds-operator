@@ -2,6 +2,11 @@
 
 ### brefore use release yaml of mysql. must modify storage class name and whitelist field
 
+* use kubectl get mysql for list mysql resource
+* use kubectl get mysqlbackup for list mysql backup resource
+* use kubectl get redis for list redis resource
+* use kubectl get proxysql for list proxysql resource
+
 ### crd operator contains below resources
 * mysql.rds.hakurei.cn/v1alpha1
     * mysql version
